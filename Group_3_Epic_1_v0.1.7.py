@@ -10,6 +10,7 @@
 loginUsername = ''
 accUsernames = []
 accPasswords = []
+cont=True
 
 def newAccount(accounts, accFile):
   count = 0
@@ -93,7 +94,7 @@ def application_menu():
   while(cont):
     print("\nYou have successfully logged in\n--------------------------------------")
 
-    print("Type number to select option:\n\n1. Job Search/internship\n2. Find Someone You Know\n3. Learn a new skill\n4. Exit")
+    print("Type number to select option:\n\n0. Exit\n1. Job Search/internship\n2. Find Someone You Know\n3. Learn a new skill")
     menuSelect = input("")
     if menuSelect == "1":
       job_search()
@@ -101,7 +102,7 @@ def application_menu():
       find_someone()
     elif menuSelect == "3":
       learn_skills()
-    elif menuSelect == "4":
+    elif menuSelect == "0":
       cont = False
     else:
       print("Invalid menu selection.")
@@ -143,8 +144,17 @@ def add_Job():
     jobFile.write(title + " " + description + " " + employer + " " + location + " " + salary + " " + loginUsername +"\n")
     print("New job posted!\n")
 
+#function lets logged in users check for mutual contacts in the InCollege system
 def find_someone():
-  print("Under Construction.")
+  SearchedName = input("Enter full name of person (0 to exit):\n").replace(" ",",")
+  if SearchedName == '0':
+    application_menu
+  else:
+    if SearchedName not in accUsernames:
+      print("They are not yet a part of the InCollege system yet.")
+    else:
+      print("They are a part of the InCollege system.")
+      print(SearchedName.replace(","," "), " can now login or sign up to join.")
 
 
 #currently in progress skills function
@@ -152,8 +162,8 @@ def learn_skills():
   cont = True
   while(cont):
     print("\nLearn a new skill\n--------------------------------------")
-    print("Type number to select option:\n\n1. Learn Javascript\n2. Learn Webdesign") 
-    print("3. Learn Java\n4. Learn Python\n5. Learn C++\n6. Return to main menu\n7. Exit")
+    print("Type number to select option:\n\n0. Exit\n1. Learn Javascript\n2. Learn Webdesign") 
+    print("3. Learn Java\n4. Learn Python\n5. Learn C++\n6. Return to main menu")
     menuSelect = input("")
     if menuSelect == "1":
       print("Under Construction.")
@@ -179,30 +189,30 @@ def learn_skills():
       print("Under Construction.")
       cont = False
 
-    elif menuSelect == "7":
+    elif menuSelect == "0":
       cont = False
 
     else:
       print("Invalid menu selection.")
-
-
+  
+            
 def main():
     cont = True
     while(cont):
-        accFile = open("accounts.txt","r+")
-        accounts = accFile.readlines()
-        loadAccounts(accounts)
-        print("Welcome to InCollege beta v0.1.3\n--------------------------------------")
-        print("Type number to select option:\n\n1. Login\n2. New Account\n3. Exit\n")
-        menuSelect = input("")
-        if menuSelect == "1":
-            login(accounts)
-        elif menuSelect == "2":
-            newAccount(accounts, accFile)
-        elif menuSelect == "3":
-            cont = False
-        else:
-            print("Invalid menu selection.")
+      accFile = open("accounts.txt","r+")
+      accounts = accFile.readlines()
+      loadAccounts(accounts)
+      print("Welcome to InCollege beta v0.1.3\n--------------------------------------")
+      print("Type number to select option:\n\n0. Exit\n1. Login\n2. New Account\n")
+      menuSelect = input("")
+      if menuSelect == "1":
+        login(accounts)
+      elif menuSelect == "2":
+        newAccount(accounts, accFile)
+      elif menuSelect == "0":
+        cont = False
+      else:
+        print("Invalid menu selection.")
         accFile.close()
 
 if __name__ == "__main__":
