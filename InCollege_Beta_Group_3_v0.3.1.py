@@ -59,8 +59,17 @@ class LoginWindow(tk.Frame):
     self.passwordEntry = tk.Entry(self, bd = 5)
     self.passwordEntry.pack(padx=10, pady=10)
 
-    enterButton = tk.Button(self, text = "Enter", command = lambda: self.login())
+    buttonframe = tk.Frame(self)
+    buttonframe.pack()
+    enterButton = tk.Button(buttonframe, text = "Enter", 
+                            command = lambda: self.login())
     enterButton.pack(padx = 10, pady = 10)
+
+    backButton = tk.Button(buttonframe, text = "Back", 
+                          command = lambda: controller.show_frame("OptionsWindow"))
+    backButton.pack(padx=10, pady=10)
+
+
 
   def login(self):
     loginUsername = self.usernameEntry.get()
