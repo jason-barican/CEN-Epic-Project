@@ -32,7 +32,8 @@ class OptionsWindow(tk.Frame):
     signInButton = tk.Button(self, text = "Sign-In")
     signInButton.pack(padx = 10, pady = 10)
 
-    videoButton = tk.Button(self, text = "Play Video")
+    videoButton = tk.Button(self, text = "Play Video",
+                            command = lambda: controller.show_frame("VideoWindow"))
     videoButton.pack(padx = 10, pady = 10)
 
     findSomeoneButton = tk.Button(self, text = "Find Someone")
@@ -71,6 +72,18 @@ class LoginWindow(tk.Frame):
       if accUsernames[i] == loginUsername:
         if accPasswords[i] != loginPassword:
           messagebox.showerror("Error", "Incorrect username/password. Please try again.")
+
+class VideoWindow(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+
+    tk.Label(self, text = "Video is now playing").pack(padx=10, pady=10)
+    backButton = tk.Button(self, text = "Back", 
+                          command = lambda: controller.show_frame("OptionsWindow"))
+    backButton.pack(padx=10, pady=10)
+
+
       
           
           
@@ -91,7 +104,7 @@ class MainWindow(tk.Tk):
     accounts = accFile.readlines()
     self.loadAccounts(accounts)
 
-    for F in (OptionsWindow, LoginWindow):
+    for F in (OptionsWindow, LoginWindow, VideoWindow):
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
       frame.grid(row = 0, column = 0, sticky = 'nsew')
