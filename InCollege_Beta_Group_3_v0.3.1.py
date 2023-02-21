@@ -6,10 +6,11 @@
 #Jian Gong
 #Eloy Fernandes Ballesteros
 
-#global arrays to store account information during runtime
+
 import tkinter as tk
 from tkinter import messagebox
 
+#global arrays to store account information during runtime
 loginUsername = ''
 accUsernames = []
 accPasswords = []
@@ -135,7 +136,7 @@ class MainWindow(tk.Tk):
       accPasswords.append(accInfo[1])
       accFullNames.append(accInfo[2] + " " + accInfo[3])
 
-  
+
 if __name__ == '__main__':
   window = MainWindow()
   window.mainloop()
@@ -202,12 +203,6 @@ def newAccount(accounts, accFile):
     print("Account registered successfully!\n")
 
 #function for playing video
-def playvideo():
-  print("\nVideo is now playing\n")
-  option = input("Type 0 to go back\n")
-  while option != "0":
-    option = input()
-  return
   
   
 #populating arrays with account data from txt file
