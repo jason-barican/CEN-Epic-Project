@@ -110,10 +110,6 @@ class MainWindow(tk.Tk):
     mainframe.pack(padx = 10, pady = 10, fill = 'both', expand = 1)
     self.framelist = {}                 #dictionary for different pages
 
-    accFile = open("accounts.txt","r+")
-    accounts = accFile.readlines()
-    self.loadAccounts(accounts)
-
     for F in (OptionsWindow, LoginWindow, VideoWindow):
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
@@ -126,7 +122,15 @@ class MainWindow(tk.Tk):
     frame = self.framelist[frame_name]
     frame.tkraise()
   
-  def loadAccounts(self, accounts):
+  
+
+
+if __name__ == '__main__':
+  window = MainWindow()
+  window.mainloop()
+
+
+def loadAccounts(self, accounts):
     accUsernames.clear()
     accPasswords.clear()
     accFullNames.clear()
@@ -135,14 +139,6 @@ class MainWindow(tk.Tk):
       accUsernames.append(accInfo[0])
       accPasswords.append(accInfo[1])
       accFullNames.append(accInfo[2] + " " + accInfo[3])
-
-
-if __name__ == '__main__':
-  window = MainWindow()
-  window.mainloop()
-
-
-
   
 
 def newAccount(accounts, accFile):
