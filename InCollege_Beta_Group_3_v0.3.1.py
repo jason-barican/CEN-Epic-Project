@@ -50,6 +50,10 @@ class LoginWindow(tk.Frame):
 
     tk.Label(self, text = "Please enter username and password.").pack(padx=10, pady=10)
 
+    accFile = open("accounts.txt","r+")
+    accounts = accFile.readlines()
+    self.loadAccounts(accounts)
+
     usernameLabel = tk.Label(self, text = "Username:")
     usernameLabel.pack(padx=10, pady=10)
     self.usernameEntry = tk.Entry(self, bd = 5)
@@ -76,12 +80,28 @@ class LoginWindow(tk.Frame):
     loginUsername = self.usernameEntry.get()
     loginPassword = self.passwordEntry.get()
 
-    messagebox.showerror("Error", "Incorrect username/password. Please try again.")
     
-    for i in range(len(accUsernames)):
-      if accUsernames[i] == loginUsername:
-        if accPasswords[i] != loginPassword:
-          messagebox.showerror("Error", "Incorrect username/password. Please try again.")
+    if loginUsername not in accUsernames:
+      messagebox.showerror("Error", "Incorrect username/password. Please try again.")
+    else:
+      for i in range(len(accUsernames)):
+        if accUsernames[i] == loginUsername:
+
+          if accPasswords[i] == loginPassword:
+            self.controller.show_frame("ApplicationWindow")
+          else:
+            messagebox.showerror("Error", "Incorrect username/password. Please try again.")
+
+  def loadAccounts(self, accounts):
+    accUsernames.clear()
+    accPasswords.clear()
+    accFullNames.clear()
+    for acc in accounts:
+      accInfo = acc.split()
+      accUsernames.append(accInfo[0])
+      accPasswords.append(accInfo[1])
+      accFullNames.append(accInfo[2] + " " + accInfo[3])
+    
 
 class VideoWindow(tk.Frame):
   def __init__(self, parent, controller):
@@ -94,7 +114,46 @@ class VideoWindow(tk.Frame):
     backButton.pack(padx=10, pady=10)
 
 
-      
+class ApplicationWindow(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller    
+
+    tk.Label(self, text = "You have successfully logged in!\nPlease select an option.").pack(padx=10, pady=10) 
+
+    jobSearchButton = tk.Button(self, text = "Job/Internship Search",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    jobSearchButton.pack(padx = 10, pady = 10)
+
+    findSomeoneButton = tk.Button(self, text = "Find Someone",
+                                  command = lambda: controller.show_frame("UnderConstruction"))
+    findSomeoneButton.pack(padx = 10, pady = 10)
+
+    learnSkillButton = tk.Button(self, text = "Learn a new skill",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    learnSkillButton.pack(padx = 10, pady = 10)
+
+    postJobButton = tk.Button(self, text = "Post a new job",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    postJobButton.pack(padx = 10, pady = 10)
+
+    exitButton = tk.Button(self, text = "Exit", command = self.quit)
+    exitButton.pack(padx = 10, pady = 10)
+
+
+
+    
+class UnderConstruction(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller  
+
+    tk.Label(self, text="Under Construction.").pack(padx=10, pady=10)
+
+    backButton = tk.Button(self, text = "Back", 
+                          command = lambda: controller.show_frame("ApplicationWindow"))
+    backButton.pack(padx=10, pady=10)
+
           
           
 
@@ -110,7 +169,7 @@ class MainWindow(tk.Tk):
     mainframe.pack(padx = 10, pady = 10, fill = 'both', expand = 1)
     self.framelist = {}                 #dictionary for different pages
 
-    for F in (OptionsWindow, LoginWindow, VideoWindow):
+    for F in (OptionsWindow, LoginWindow, VideoWindow, ApplicationWindow, UnderConstruction):
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
       frame.grid(row = 0, column = 0, sticky = 'nsew')
@@ -121,24 +180,13 @@ class MainWindow(tk.Tk):
   def show_frame(self, frame_name):
     frame = self.framelist[frame_name]
     frame.tkraise()
-  
-  
 
-
+  
 if __name__ == '__main__':
   window = MainWindow()
   window.mainloop()
 
 
-def loadAccounts(self, accounts):
-    accUsernames.clear()
-    accPasswords.clear()
-    accFullNames.clear()
-    for acc in accounts:
-      accInfo = acc.split()
-      accUsernames.append(accInfo[0])
-      accPasswords.append(accInfo[1])
-      accFullNames.append(accInfo[2] + " " + accInfo[3])
   
 
 def newAccount(accounts, accFile):
@@ -197,16 +245,6 @@ def newAccount(accounts, accFile):
     #storing account data in file.
     accFile.write(newUsername + " " + password + " " + name + "\n")
     print("Account registered successfully!\n")
-
-#function for playing video
-  
-  
-#populating arrays with account data from txt file
-
-
-#checks entered credentials against stored user information for match
-
-  
 
 
 #presents menu for user to utilize application functions
@@ -314,38 +352,39 @@ def learn_skills():
 
     else:
       print("Invalid menu selection.")
-  
-"""            
+
+
 def main():
-    cont = True
-    while(cont):
-      accFile = open("accounts.txt","r+")
-      accounts = accFile.readlines()
-      loadAccounts(accounts)
-      print("--------------------------------------\nWelcome to InCollege beta v0.2.3\n--------------------------------------\n")
+    
+    accFile = open("accounts.txt","r+")
+    accounts = accFile.readlines()
+    loadAccounts(accounts)
 
-      print("INCOLLEGE SUCCESS STORY\n--------------------------------------")
-      print('"John used LinkedIn.\nHe could not get a job.\nJohn then started using InCollege.\nHe got a job."')
-      print("--------------------------------------\n")
+    
 
-      print("Type number to select option:\n\n0. Exit\n1. Login\n2. New Account\n3. Play Video\n4. Find someone who can help\n")
+    print("--------------------------------------\nWelcome to InCollege beta v0.2.3\n--------------------------------------\n")
+
+    print("INCOLLEGE SUCCESS STORY\n--------------------------------------")
+    print('"John used LinkedIn.\nHe could not get a job.\nJohn then started using InCollege.\nHe got a job."')
+    print("--------------------------------------\n")
+
+    print("Type number to select option:\n\n0. Exit\n1. Login\n2. New Account\n3. Play Video\n4. Find someone who can help\n")
 
      
-      menuSelect = input("")
-      if menuSelect == "1":
-        login(accounts)
-      elif menuSelect == "2":
-        newAccount(accounts, accFile)
-      elif menuSelect == "3":
-        playvideo()
-      elif menuSelect == "4":
-        find_someone()
-      elif menuSelect == "0":
-        cont = False
-      else:
-        print("Invalid menu selection.")
-      accFile.close()
+    menuSelect = input("")
+    if menuSelect == "1":
+      login(accounts)
+    elif menuSelect == "2":
+      newAccount(accounts, accFile)
+    elif menuSelect == "3":
+      playvideo()
+    elif menuSelect == "4":
+      find_someone()
+    elif menuSelect == "0":
+      cont = False
+    else:
+      print("Invalid menu selection.")
+    accFile.close()
 
-if __name__ == "__main__":
-    main()
-"""
+      
+
