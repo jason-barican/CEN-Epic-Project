@@ -233,7 +233,7 @@ class ApplicationWindow(tk.Frame):
     tk.Label(self, text = "You have successfully logged in!\nPlease select an option.").pack(padx=10, pady=10) 
 
     jobSearchButton = tk.Button(self, text = "Job/Internship Search",
-                            command = lambda: controller.show_frame("UnderConstruction"))
+                            command = lambda: controller.show_frame("JobSearchFrame"))
     jobSearchButton.pack(padx = 10, pady = 10)
 
     findSomeoneButton = tk.Button(self, text = "Find Someone",
@@ -245,7 +245,7 @@ class ApplicationWindow(tk.Frame):
     learnSkillButton.pack(padx = 10, pady = 10)
 
     postJobButton = tk.Button(self, text = "Post a new job",
-                            command = lambda: controller.show_frame("UnderConstruction"))
+                            command = lambda: controller.show_frame("AddJobFrame"))
     postJobButton.pack(padx = 10, pady = 10)
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
@@ -312,7 +312,8 @@ class MainWindow(tk.Tk):
 
     for F in (OptionsWindow, LoginWindow, SignInWindow,
               VideoWindow, ApplicationWindow, LearnSkillWindow,
-              FindSomeoneFrame, UnderConstruction):
+              FindSomeoneFrame, JobSearchFrame, AddJobFrame, 
+              UnderConstruction):
 
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
@@ -372,6 +373,85 @@ class FindSomeoneFrame(tk.Frame):
       result_label = tk.Label(self, text=result_text)
       result_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
       
+class JobSearchFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+
+    tk.Label(self, text="Welcome to Job/Internship Search!\nPlease select an option below.").pack(padx=10, pady=10)
+
+    addJobButton = tk.Button(self, text = "Add Job",
+                            command = lambda: controller.show_frame("AddJobFrame"))
+    addJobButton.pack(padx = 10, pady = 10)
+
+    backButton = tk.Button(self, text = "Back", 
+                          command = lambda: controller.show_frame("ApplicationWindow"))
+    backButton.pack(padx=10, pady=10)
+
+
+
+class AddJobFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+    self.create_widgets()
+
+  def create_widgets(self):
+      self.title_label = tk.Label(self, text="Enter title:")
+      self.title_entry = tk.Entry(self)
+      self.title_label.grid(row=0, column=0, padx=5, pady=5)
+      self.title_entry.grid(row=0, column=1, padx=5, pady=5)
+
+      self.description_label = tk.Label(self, text="Enter description:")
+      self.description_entry = tk.Entry(self)
+      self.description_label.grid(row=1, column=0, padx=5, pady=5)
+      self.description_entry.grid(row=1, column=1, padx=5, pady=5)
+
+      self.employer_label = tk.Label(self, text="Enter employer:")
+      self.employer_entry = tk.Entry(self)
+      self.employer_label.grid(row=2, column=0, padx=5, pady=5)
+      self.employer_entry.grid(row=2, column=1, padx=5, pady=5)
+
+      self.location_label = tk.Label(self, text="Enter location:")
+      self.location_entry = tk.Entry(self)
+      self.location_label.grid(row=3, column=0, padx=5, pady=5)
+      self.location_entry.grid(row=3, column=1, padx=5, pady=5)
+
+      self.salary_label = tk.Label(self, text="Enter salary:")
+      self.salary_entry = tk.Entry(self)
+      self.salary_label.grid(row=4, column=0, padx=5, pady=5)
+      self.salary_entry.grid(row=4, column=1, padx=5, pady=5)
+
+      self.post_button = tk.Button(self, text="Post job", command=self.post_job)
+      self.post_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+
+      self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
+      self.back_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+
+  def post_job(self):
+      jobFile = open("jobs.txt","r+")
+      jobs = jobFile.readlines()
+      count = 0
+      for job in jobs:
+        count += 1
+
+      #checking if amount of accounts has exceeded maximum
+      if count >= 5:
+        result_text = "All permitted jobs have been created, please come back later"
+      else:
+        global loginUsername
+        title = self.title_entry.get()
+        description = self.description_entry.get()
+        employer = self.employer_entry.get()
+        location = self.location_entry.get()
+        salary = self.salary_entry.get()
+        jobFile.write(title + " " + description + " " + employer + " " + location + " " + salary + " " + loginUsername +"\n")
+        result_text = "New job posted!"
+
+      result_label = tk.Label(self, text=result_text)
+      result_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
+
+
 
   
 if __name__ == '__main__':
