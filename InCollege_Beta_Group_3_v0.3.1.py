@@ -241,7 +241,7 @@ class ApplicationWindow(tk.Frame):
     findSomeoneButton.pack(padx = 10, pady = 10)
 
     learnSkillButton = tk.Button(self, text = "Learn a new skill",
-                            command = lambda: controller.show_frame("UnderConstruction"))
+                            command = lambda: controller.show_frame("LearnSkillWindow"))
     learnSkillButton.pack(padx = 10, pady = 10)
 
     postJobButton = tk.Button(self, text = "Post a new job",
@@ -250,6 +250,38 @@ class ApplicationWindow(tk.Frame):
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
     exitButton.pack(padx = 10, pady = 10)
+
+class LearnSkillWindow(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+
+    tk.Label(self, text = "Please select a skill to learn.").pack(padx=10, pady=10) 
+
+
+    skill1Button = tk.Button(self, text = "Skill 1",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    skill1Button.pack(padx = 10, pady = 10)
+
+    skill2Button = tk.Button(self, text = "Skill 2",
+                                  command = lambda: controller.show_frame("UnderConstruction"))
+    skill2Button.pack(padx = 10, pady = 10)
+
+    skill3Button = tk.Button(self, text = "Skill 3",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    skill3Button.pack(padx = 10, pady = 10)
+
+    skill4Button = tk.Button(self, text = "Skill 4",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    skill4Button.pack(padx = 10, pady = 10)
+
+    skill5Button = tk.Button(self, text = "Skill 5",
+                            command = lambda: controller.show_frame("UnderConstruction"))
+    skill5Button.pack(padx = 10, pady = 10)
+
+    exitButton = tk.Button(self, text = "Exit", command = self.quit)
+    exitButton.pack(padx = 10, pady = 10)
+
 
 
 
@@ -279,7 +311,9 @@ class MainWindow(tk.Tk):
     self.framelist = {}                 #dictionary for different pages
 
     for F in (OptionsWindow, LoginWindow, SignInWindow,
-              VideoWindow, ApplicationWindow, FindSomeoneFrame, UnderConstruction):
+              VideoWindow, ApplicationWindow, LearnSkillWindow,
+              FindSomeoneFrame, UnderConstruction):
+
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
       frame.grid(row = 0, column = 0, sticky = 'nsew')
