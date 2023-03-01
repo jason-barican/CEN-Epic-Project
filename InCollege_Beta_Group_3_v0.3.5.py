@@ -19,6 +19,7 @@ accEmailPrefs = "1"
 accSMSPrefs = "1"
 accTAPrefs = "1"
 #accLangPrefs = "E"
+PrevWindow = "MainMenu"
 cont=True
 
 #presents menu for user to utilize application functions
@@ -375,6 +376,8 @@ class LanguageFrame(tk.Frame):
   def on_show_frame(self, event):
     selected_language = self.language_var.get()
     print(selected_language)
+    print(PrevWindow)
+    print(self.language_var.get())
     if selected_language == "English":
       self.english_checkbox.select()
     elif selected_language == "Spanish":
@@ -393,8 +396,7 @@ class LanguageFrame(tk.Frame):
     # ...
 
     # Return to the previous frame
-    self.controller.show_frame("MainMenu")
-    
+    self.controller.show_frame(PrevWindow)
 
 
 
@@ -515,7 +517,6 @@ class LoginWindow(tk.Frame):
             accTAPrefs = accInfo[6]
             #accLangPrefs = accInfo[7]
             self.language_var = accInfo[7]
-            print(accInfo[7])
             print(self.language_var)
 
             self.controller.show_frame("ApplicationWindow")
@@ -660,6 +661,7 @@ class ApplicationWindow(tk.Frame):
     options = ["General", "Browse InCollege", "Business Solutions", "Directories"]
     option_menu = tk.OptionMenu(self, menu_var, *options)
     option_menu.pack(padx = 10, pady = 10)
+    self.bind("<<ShowFrame>>", self.on_show_frame)
 
     option_menu['menu'].entryconfig(0, command=lambda: controller.show_frame("GeneralWindow"))
     # Bind the "Browse InCollege", "Business Solutions", and "Directories" options to the "under_construction" function
@@ -667,24 +669,26 @@ class ApplicationWindow(tk.Frame):
     option_menu['menu'].entryconfig(2, command=lambda: controller.show_frame("UnderConstruction"))
     option_menu['menu'].entryconfig(3, command=lambda: controller.show_frame("UnderConstruction"))
 
-    jobSearchButton = tk.Button(self, text = "Job/Internship Search",
-                            command = lambda: controller.show_frame("JobSearchFrame"))
+    jobSearchButton = tk.Button(self, text = "Job/Internship Search", command = lambda: controller.show_frame("JobSearchFrame"))
     jobSearchButton.pack(padx = 10, pady = 10)
 
-    findSomeoneButton = tk.Button(self, text = "Find Someone",
-                                  command = lambda: controller.show_frame("FindSomeoneFrame"))
+    findSomeoneButton = tk.Button(self, text = "Find Someone", command = lambda: controller.show_frame("FindSomeoneFrame"))
     findSomeoneButton.pack(padx = 10, pady = 10)
 
-    learnSkillButton = tk.Button(self, text = "Learn a new skill",
-                            command = lambda: controller.show_frame("LearnSkillWindow"))
+    learnSkillButton = tk.Button(self, text = "Learn a new skill", command = lambda: controller.show_frame("LearnSkillWindow"))
     learnSkillButton.pack(padx = 10, pady = 10)
 
-    postJobButton = tk.Button(self, text = "Post a new job",
-                            command = lambda: controller.show_frame("AddJobFrame"))
+    postJobButton = tk.Button(self, text = "Post a new job", command = lambda: controller.show_frame("AddJobFrame"))
+    postJobButton.pack(padx = 10, pady = 10)
+
+    postJobButton = tk.Button(self, text = "Add friends", command = lambda: controller.show_frame("FriendFrame"))
     postJobButton.pack(padx = 10, pady = 10)
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
     exitButton.pack(padx = 10, pady = 10)
+
+    backButton = tk.Button(self, text="Back to Main Menu", command=lambda: controller.show_frame("MainMenu"))
+    backButton.pack(padx = 10, pady = 10)
 
 # Create the second dropdown menu with the options "Copyright Notice", "About", "Accessibility", "User Agreement", "Privacy Policy", "Cookie Policy", "Copyright Policy", "Brand Policy", "Guest Controls", and "Languages"
     menu_var2 = tk.StringVar()
@@ -710,6 +714,8 @@ class ApplicationWindow(tk.Frame):
     option_menu2['menu'].entryconfig(7, command=lambda: controller.show_frame("BrandPolicyFrame"))
     option_menu2['menu'].entryconfig(9, command=lambda: controller.show_frame("LanguageFrame"))
 
+  def on_show_frame(self, event):
+    PrevWindow = "ApplicationWindow"
 
 class LearnSkillWindow(tk.Frame):
   def __init__(self, parent, controller):
@@ -738,6 +744,9 @@ class LearnSkillWindow(tk.Frame):
     skill5Button = tk.Button(self, text = "Skill 5",
                             command = lambda: controller.show_frame("UnderConstruction"))
     skill5Button.pack(padx = 10, pady = 10)
+
+    backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
+    backButton.pack(padx = 10, pady = 10)
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
     exitButton.pack(padx = 10, pady = 10)
@@ -804,7 +813,117 @@ class JobSearchFrame(tk.Frame):
                           command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
 
+class FriendFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
 
+    # Create Scrollbar widget and Canvas widget
+    scrollbar = tk.Scrollbar(self)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    self.canvas = tk.Canvas(self, yscrollcommand=scrollbar.set)
+    self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.config(command=self.canvas.yview)
+
+    # Create a Frame widget to contain all the elements and buttons
+    self.frame = tk.Frame(self.canvas)
+    self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
+
+
+
+    # Read the specified elements from the file
+    self.elements = self.read_file('accounts.txt', '"start"', '"end"')
+
+    # Display the elements and buttons in the Frame widget
+    self.add_elements()
+
+    # Allow the Canvas widget to automatically adjust its size
+    self.frame.update_idletasks()
+    self.canvas.config(scrollregion=self.canvas.bbox('all'))
+
+  def read_file(self, filename, start_elem, end_elem):
+    elements = []
+    with open(filename, 'r') as f:
+        content = f.read()
+        start_index = content.index(start_elem) + len(start_elem)
+        end_index = len(content)  # Assume end of file is end index
+        if end_elem in content[start_index:]:
+            end_index = content.index(end_elem, start_index)
+            # Split the content between start_elem and end_elem into elements
+            content_between = content[start_index:end_index]
+            elements = [e.strip() for e in content_between.split("\"")]
+        else:
+            end_index = len(content)  # Assume end of file is end index
+    return elements
+  
+  def add_elements(self):
+    if not self.elements:
+        # Display "No new request" if there are no elements
+        label = tk.Label(self.frame, text="No new request", width=50)
+        label.grid(row=0, column=0, padx=5, pady=5)
+    else:
+        # Add elements and buttons to the Frame widget
+        for i, element in enumerate(self.elements):
+            label = tk.Label(self.frame, text=element, width=50)
+            label.grid(row=i, column=0, padx=5, pady=5)
+            button1 = tk.Button(self.frame, text='reject', command=lambda element=element: self.delete_element(element))
+            button1.grid(row=i, column=1, padx=5, pady=5)
+            button2 = tk.Button(self.frame, text='accept', command=lambda element=element: self.move_element(element))
+            button2.grid(row=i, column=2, padx=5, pady=5)
+    backButton = tk.Button(self, text = "Back", command = lambda: self.controller.show_frame("ApplicationWindow"))
+    backButton.pack(padx=5, pady=5)
+
+  def delete_element(self, element):
+    # Read the file and remove the specified element
+    with open('accounts.txt', 'r') as f:
+        lines = f.readlines()
+    with open('accounts.txt', 'w') as f:
+        for line in lines:
+            if element not in line:
+                f.write(line)
+            else:
+                # Remove the specified element from the line
+                line = line.replace(element, "")
+                line = line.replace('""', '"')
+                f.write(line)
+    self.update_frame()
+
+  def move_element(self, element):
+# Read the contents of the file into a variable
+    with open('accounts.txt', 'r') as f:
+        content = f.read()
+
+    # Find the index of the "end" tag
+    end_index = content.find('"end"')
+
+    # Delete the element if it exists in the file
+    if element in content:
+        content = content.replace(element, '')
+
+
+
+    # Write the updated content back to the file
+    with open('accounts.txt', 'w') as f:
+        content = content.replace('""', '"')
+        f.write(content)
+
+    # Update the Frame widget
+    self.update_frame()
+
+
+  def update_frame(self):
+    # Reload the elements
+    self.elements = self.read_file('accounts.txt', '"start"', '"end"')
+
+    # Update the Frame widget
+    self.frame.destroy()
+    self.frame = tk.Frame(self.canvas)
+    self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
+    self.add_elements()
+
+    # Allow the Canvas widget to automatically adjust its size
+    self.frame.update_idletasks()
+    self.canvas.config(scrollregion=self.canvas.bbox('all'))
 
 class AddJobFrame(tk.Frame):
   def __init__(self, parent, controller):
@@ -885,7 +1004,7 @@ class MainWindow(tk.Tk):
               PrivacyPolicyFrame, CookiePolicyFrame, CopyrightPolicyFrame,
               BrandPolicyFrame, GuestControlsFrame, LanguageFrame,
               GeneralWindow, HelpCenterFrame, AboutFrame, 
-              PressFrame, UnderConstruction):
+              PressFrame, UnderConstruction, FriendFrame):
 
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
