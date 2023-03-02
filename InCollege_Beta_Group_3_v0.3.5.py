@@ -33,30 +33,29 @@ class MainMenu(tk.Frame):
         accounts = accFile.readlines()
         self.controller.loadAccounts(accounts)
         
-        tk.Label(self, text = "Welcome to InCollege Beta!\n\nINCOLLEGE SUCCESS STORY\nJohn used LinkedIn.\nHe could not get a job.\nJohn then started using InCollege.\nHe got a job.\n\nPlease select an option below.").place(x=300,y=25)
-        self.pack(padx = 5, pady = 5)
+        tk.Label(self, text = "Welcome to InCollege Beta!\n\nINCOLLEGE SUCCESS STORY\nJohn used LinkedIn.\nHe could not get a job.\nJohn then started using InCollege.\nHe got a job.\n\nPlease select an option below.").pack(padx=10, pady=10)
         
         # Create a dropdown menu with the options "General", "Browse InCollege", "Business Solutions", and "Directories"
         menu_var = tk.StringVar()
         menu_var.set("Useful Links")
         options = ["General", "Browse InCollege", "Business Solutions", "Directories"]
         option_menu = tk.OptionMenu(self, menu_var, *options)
-        option_menu.place(x=315, y=190)
+        option_menu.pack(padx=10, pady=10)
         option_menu.config(width=25, height =2)
 
         
         # Create buttons to navigate to different frames based on the selected option
         loginButton = tk.Button(self, text="Login", command=lambda: controller.show_frame("LoginWindow"), width = 25, height = 2)
-        loginButton.place(x=315, y=250)
+        loginButton.pack(padx=10, pady=10)
         
         signInButton = tk.Button(self, text="Sign-Up", command=lambda: controller.show_frame("SignUpWindow"), width = 25, height = 2)
-        signInButton.place(x=315, y=310)
+        signInButton.pack(padx=10, pady=10)
         
         videoButton = tk.Button(self, text="Play Video", command=lambda: controller.show_frame("VideoWindow"), width = 25, height = 2)
-        videoButton.place(x=315, y=370)
+        videoButton.pack(padx=10, pady=10)
         
         findSomeoneButton = tk.Button(self, text="Find Someone", command=lambda: controller.show_frame("FindSomeoneFrame"), width = 25, height = 2)
-        findSomeoneButton.place(x=315, y=430)
+        findSomeoneButton.pack(padx=10, pady=10)
         
         option_menu['menu'].entryconfig(0, command=lambda: controller.show_frame("GeneralWindow"))
         # Bind the "Browse InCollege", "Business Solutions", and "Directories" options to the "under_construction" function
@@ -65,7 +64,7 @@ class MainMenu(tk.Frame):
         option_menu['menu'].entryconfig(3, command=lambda: controller.show_frame("UnderConstruction"))
         
         exitButton = tk.Button(self, text="Exit", command=self.quit, width = 25, height = 2)
-        exitButton.place(x=315, y=490)
+        exitButton.pack(padx=10, pady=10)
 
         # Create the second dropdown menu with the options "Copyright Notice", "About", "Accessibility", "User Agreement", "Privacy Policy", "Cookie Policy", "Copyright Policy", "Brand Policy", "Guest Controls", and "Languages"
         menu_var2 = tk.StringVar()
@@ -80,7 +79,7 @@ class MainMenu(tk.Frame):
                     "Brand Policy",
                     "Languages"]
         option_menu2 = tk.OptionMenu(self, menu_var2, *options2)
-        option_menu2.place(x=315, y=550)
+        option_menu2.pack(padx=10, pady=10)
         option_menu2['menu'].entryconfig(0, command=lambda: controller.show_frame("CopyrightNoticeFrame"))
         option_menu2['menu'].entryconfig(1, command=lambda: controller.show_frame("InCollegeAboutFrame"))
         option_menu2['menu'].entryconfig(2, command=lambda: controller.show_frame("AccessibilityNoticeFrame"))
@@ -266,8 +265,8 @@ class CopyrightPolicyFrame(tk.Frame):
         self.controller = controller
         
         tk.Label(self, text="""InCollege Copyright Policy\n\n
-                               All content included on the InCollege website, including but not limited to text, graphics, logos, images, audio clips, video clips, and software, 
-                               is the property of InCollege or its content suppliers and is protected by United States and international copyright laws. 
+                               All content included on the InCollege website, including but not limited to text, graphics, logos, images, 
+                               audio clips, video clips, and software, is the property of InCollege or its content suppliers and is protected by United States and international copyright laws. 
                                The compilation of all content on this site is the exclusive property of InCollege and is protected by United States and international copyright laws. \n\n
                                InCollege reserves the right to terminate the accounts of users who infringe upon the intellectual property rights of others. 
                                If you believe that your work has been used on the InCollege website in a way that constitutes copyright infringement, 
@@ -280,7 +279,7 @@ class CopyrightPolicyFrame(tk.Frame):
                                - A statement by you, made under penalty of perjury, that the above information in your notice is accurate and that you are the copyright owner or 
                                authorized to act on the copyright owner's behalf.\n\n
                                InCollege may revise this Copyright Policy at any time without notice. By using this website, 
-                               you are agreeing to be bound by the then-current version of this Copyright Policy.""").pack(padx=10, pady=10)
+                               you are agreeing to be bound by the then-current version of this Copyright Policy.""", bd = 1, relief = "sunken").pack(pady=10)
         
         backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("MainMenu"))
         backButton.pack(padx=10, pady=10)
@@ -778,15 +777,15 @@ class FindSomeoneFrame(tk.Frame):
   def create_widgets(self):
       self.name_label = tk.Label(self, text="Enter full name of person:")
       self.name_entry = tk.Entry(self)
-      self.name_label.grid(row=0, column=0, padx=5, pady=5)
-      self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+      self.name_label.pack(padx=10, pady=10)
+      self.name_entry.pack(padx=10, pady=10)
 
       self.search_button = tk.Button(self, text="Search", command=self.search)
-      self.search_button.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+      self.search_button.pack(padx=10, pady=10)
 
       backButton = tk.Button(self, text = "Back", 
                             command = lambda: self.controller.show_frame("MainMenu"))
-      backButton.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+      backButton.pack(padx=10, pady=10)
 
   def search(self):
       searched_name = self.name_entry.get()
@@ -796,7 +795,7 @@ class FindSomeoneFrame(tk.Frame):
       else:
           result_text = f"{searched_name} is part of the InCollege system. Login or sign up to join them!"
       result_label = tk.Label(self, text=result_text)
-      result_label.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+      result_label.pack(padx=10, pady=10)
       
 class JobSearchFrame(tk.Frame):
   def __init__(self, parent, controller):
@@ -813,6 +812,7 @@ class JobSearchFrame(tk.Frame):
                           command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
 
+""""""
 class FriendFrame(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
@@ -993,7 +993,6 @@ class MainWindow(tk.Tk):
 
     mainframe = tk.Frame()
     self.windowNum = 0
-    self.geometry("800x800")
     mainframe.pack(padx = 5, pady = 5,)# fill = 'both', expand = 1)
     self.framelist = {}                 #dictionary for different pages
 
