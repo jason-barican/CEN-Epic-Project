@@ -8,6 +8,7 @@
 
 
 import tkinter as tk
+import sqlite3
 from tkinter import messagebox
 
 #global arrays to store account information during runtime
@@ -29,6 +30,8 @@ class MainMenu(tk.Frame):
         self.controller = controller
         #self.controller.geometry("800x800")
         self.controller.title('InCollege beta v0.3.4')
+
+        
         accFile = open("accounts.txt","r+")
         accounts = accFile.readlines()
         self.controller.loadAccounts(accounts)
@@ -526,13 +529,28 @@ class SignUpWindow(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
     self.controller = controller
-         
+
+    #opens database
+    self.conn = sqlite3.connect('database.db')  
+    self.cursor = self.conn.cursor()
+
+    #username entry
     tk.Label(self, text="Create Username:").pack(padx=10, pady=10)
     self.newUsernameEntry = tk.Entry(self,bd = 5)
     self.newUsernameEntry.pack(padx=10, pady=10)
 
+    #password entry
+    tk.Label(self,text= "Create Password:").pack(padx=10, pady=10)
+    self.newPasswordEntry = tk.Entry(self,bd = 5)
+    self.newPasswordEntry.pack(padx=10, pady=10)
+
+    #full name entry
+    tk.Label(self,text= "Enter your first and last name:").pack(padx=10, pady=10)
+    self.fullNameEntry = tk.Entry(self,bd = 5)
+    self.fullNameEntry.pack(padx=10, pady=10)
+
     self.enterButton = tk.Button(self, text = "Enter", 
-                          command = lambda: self.usernameCheck())
+                          command = lambda: self.checkIfValid())
     self.enterButton.pack(padx = 10, pady = 10)
     
     self.backButton = tk.Button(self, text = "Back", 
@@ -540,101 +558,92 @@ class SignUpWindow(tk.Frame):
     self.backButton.pack(padx=10, pady=10)
         
 
-  def usernameCheck(self):
+  def checkIfValid(self):
 
-    self.accFile = open("accounts.txt","r+")
-    accounts = self.accFile.readlines()
-    self.controller.loadAccounts(accounts)
-    
     count = 0
-    for acc in accounts:
-      count+=1
+    self.cursor.execute('''SELECT * from USER_DATA''')
+    database = self.cursor.fetchall()
+    print(database)
+
+    usernameValid = False
+    passwordValid = False
+    fullNameValid = False
+
+    count += len(database)
     
     if count >= 5:
       tk.Label(self, text="All permitted accounts have been created. Please come back later.").pack(padx=10, pady=10)
     else:
       self.newUsername = self.newUsernameEntry.get().replace(" ","")
-      valid = False
-      while valid is False:
-        if len(accUsernames) == 0:
-          valid = True
-          tk.Label(self,text= "Create Password:").pack(padx=10, pady=10)
-          self.enterButton.pack_forget()
-          self.backButton.pack_forget()
-          
-          self.newPasswordEntry = tk.Entry(self,bd = 5)
-          self.newPasswordEntry.pack(padx=10, pady=10)
-
-          self.enterButton = tk.Button(self, text = "Enter", 
-                            command = lambda: self.passwordCheck())
-          self.enterButton.pack(padx = 10, pady = 10)
-          #ensuring username is unique
-        else:
-          if self.newUsername in accUsernames:
-            messagebox.showerror("Error", "Account username already in use. Please try again.")
-            break
-          else:
-            valid = True
-            tk.Label(self,text= "Create Password:").pack(padx=10, pady=10)
-            self.enterButton.pack_forget()
-            self.backButton.pack_forget()
-            
-            self.newPasswordEntry = tk.Entry(self,bd = 5)
-            self.newPasswordEntry.pack(padx=10, pady=10)
-
-            self.enterButton = tk.Button(self, text = "Enter", 
-                              command = lambda: self.passwordCheck())
-            self.enterButton.pack(padx = 10, pady = 10)
-
-       
-  def passwordCheck(self):  
-    valid = False
-  
-    while valid is False:
-      hasDigit = False
-      hasNonAlphaNumeric = False
       
-      self.newPassword = self.newPasswordEntry.get().replace(" ","")
+      if len(database) != 0:
+        self.cursor.execute("SELECT USERNAME from USER_DATA")
+        usernames = self.cursor.fetchall()
 
-      #validation check for length and presence of upercase, special, and numeric character.
-      if len(self.newPassword) >= 8 and len(self.newPassword) <= 12 and self.newPassword.lower() != self.newPassword:
-        for char in self.newPassword:
-          if char.isdigit():
-            hasDigit = True
-          if not char.isalpha():
-            hasNonAlphaNumeric = True
-      if hasDigit is True and hasNonAlphaNumeric is True:
-        valid = True
-        tk.Label(self,text= "Enter your first and last name:").pack(padx=10, pady=10)
-        self.enterButton.pack_forget()
-        self.fullNameEntry = tk.Entry(self,bd = 5)
-        self.fullNameEntry.pack(padx=10, pady=10)
+        for i in range(0, len(usernames)):
 
-        self.enterButton = tk.Button(self, text = "Enter", 
-                            command = lambda: self.fullName())
-        self.enterButton.pack(padx = 10, pady = 10)
+          #ensuring username is unique
+          if self.newUsername in usernames[i] or self.newUsername == "":
+            messagebox.showerror("Error", "Invalid Entry/Account username already in use. Please try again.")
+            self.newUsernameEntry.delete(0, 'end')
+          else:
+             usernameValid = True
+  
+    
+    hasDigit = False
+    hasNonAlphaNumeric = False
+    
+    self.newPassword = self.newPasswordEntry.get().replace(" ","")
 
-      else:
-        messagebox.showerror("Error", "Invalid Password. Try a better password.")
-        break
+    #validation check for length and presence of upercase, special, and numeric character.
+    if len(self.newPassword) >= 8 and len(self.newPassword) <= 12 and self.newPassword.lower() != self.newPassword:
+      for char in self.newPassword:
+        if char.isdigit():
+          hasDigit = True
+        if not char.isalpha():
+          hasNonAlphaNumeric = True
+    if hasDigit is not True and hasNonAlphaNumeric is not True:
+      messagebox.showerror("Error", "Invalid Password. Try a better password.")
+      self.newPasswordEntry.delete(0, 'end')
+    else:
+      passwordValid = True
 
-  def fullName(self):
-    valid = False
+ 
+    self.name = self.fullNameEntry.get()
+    nameCount = self.name.split()
 
-    while valid is False:
-      self.name = self.fullNameEntry.get()
-      nameCount = self.name.split()
+    if len(nameCount) != 2:
+      messagebox.showerror("Error", "Invalid format, Two names not found. Please try again.")
+      self.fullNameEntry.delete(0, 'end')
 
-      if len(nameCount) != 2:
-        messagebox.showerror("Error", "Invalid format, Two names not found. Please try again.")
-        break
+    else:
+      fullNameValid = True
+      self.firstName = nameCount[0]
+      self.lastName = nameCount[1]
 
-      else:
-        valid = True
-        self.accFile.write(self.newUsername + " " + self.newPassword + " " + self.name + " 1 1 1 E\n")
-        self.accFile.close()
-        messagebox.showinfo("Account Created", "You have successfully created a new account.")
-        self.destroy()
+    if usernameValid is True and passwordValid is True and fullNameValid is True:
+      data_insert_query = ('''INSERT INTO USER_DATA(
+                          USERNAME, PASSWORD, FIRSTNAME, LASTNAME) VALUES
+                          (?, ?, ?, ?)
+                          ''')
+    
+    
+      #executed through tuples since insert query cant read from variable
+      data_insert_tuple = (self.newUsername, self.newPassword, self.firstName, self.lastName)
+
+      self.cursor.execute(data_insert_query,data_insert_tuple)
+      self.conn.commit()
+      
+      messagebox.showinfo("Account Created", "You have successfully created a new account.")
+
+      self.newUsernameEntry.delete(0, 'end')
+      self.newPasswordEntry.delete(0, 'end')
+      self.fullNameEntry.delete(0, 'end')
+      self.controller.show_frame("MainMenu")
+
+      usernameValid = False
+      passwordValid = False
+      fullNameValid = False
 
 
 class VideoWindow(tk.Frame):
@@ -812,7 +821,7 @@ class JobSearchFrame(tk.Frame):
                           command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
 
-""""""
+"""
 class FriendFrame(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
@@ -924,6 +933,8 @@ class FriendFrame(tk.Frame):
     # Allow the Canvas widget to automatically adjust its size
     self.frame.update_idletasks()
     self.canvas.config(scrollregion=self.canvas.bbox('all'))
+"""
+
 
 class AddJobFrame(tk.Frame):
   def __init__(self, parent, controller):
@@ -1003,7 +1014,7 @@ class MainWindow(tk.Tk):
               PrivacyPolicyFrame, CookiePolicyFrame, CopyrightPolicyFrame,
               BrandPolicyFrame, GuestControlsFrame, LanguageFrame,
               GeneralWindow, HelpCenterFrame, AboutFrame, 
-              PressFrame, UnderConstruction, FriendFrame):
+              PressFrame, UnderConstruction):
 
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
@@ -1011,6 +1022,20 @@ class MainWindow(tk.Tk):
       self.framelist[frame_name] = frame
 
     self.show_frame("MainMenu")
+
+    #creation of sqlite database
+    conn = sqlite3.connect('database.db')
+    table_create_query = '''CREATE TABLE IF NOT EXISTS USER_DATA(
+                    USERNAME TEXT, 
+                    PASSWORD TEXT, 
+                    FIRSTNAME TEXT, 
+                    LASTNAME TEXT
+    )'''
+
+
+    conn.execute(table_create_query)
+    
+
 
     accFile = open("accounts.txt","r+")
     accounts = accFile.readlines()
