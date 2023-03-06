@@ -16,10 +16,10 @@ loginUsername = ''
 accUsernames = []
 accPasswords = []
 accFullNames = []
-accEmailPrefs = "1"
-accSMSPrefs = "1"
-accTAPrefs = "1"
-#accLangPrefs = "E"
+accEmailPrefs = 1
+accSMSPrefs = 1
+accTAPrefs = 1
+accLangPrefs = "E"
 PrevWindow = "MainMenu"
 cont=True
 
@@ -474,6 +474,7 @@ class LoginWindow(tk.Frame):
     self.controller = controller
 
     tk.Label(self, text = "Please enter username and password.").pack(padx=10, pady=10)
+    self.loggedIn = False
 
     usernameLabel = tk.Label(self, text = "Username:")
     usernameLabel.pack(padx=10, pady=10)
@@ -501,29 +502,25 @@ class LoginWindow(tk.Frame):
     loginUsername = self.usernameEntry.get()
     loginPassword = self.passwordEntry.get()
 
-    accFile = open("accounts.txt","r+")
-    accounts = accFile.readlines()
-    self.controller.loadAccounts(accounts)
-    
-    if loginUsername not in accUsernames:
+    self.database = sqlite3.connect('database.db')  
+    self.databaseCursor = self.database.cursor()
+
+    self.databaseCursor.execute("SELECT * from USER_DATA")
+    accounts = self.databaseCursor.fetchall()
+
+    print(accounts)
+
+    for i in range(0, len(accounts)):
+      if loginUsername in accounts[i]:
+        if loginPassword in accounts[i]:
+          
+          self.loggedIn = True
+          messagebox.showinfo("Logged In", "You have successfully logged in.")
+          self.controller.show_frame("ApplicationWindow")
+
+    if self.loggedIn == False:
       messagebox.showerror("Error", "Incorrect username/password. Please try again.")
-    else:
-      for i in range(len(accUsernames)):
-        if accUsernames[i] == loginUsername:
-
-          if accPasswords[i] == loginPassword:
-            acc = accounts[i]
-            accInfo = acc.split()
-            accEmailPrefs = accInfo[4]
-            accSMSPrefs = accInfo[5]
-            accTAPrefs = accInfo[6]
-            #accLangPrefs = accInfo[7]
-            self.language_var = accInfo[7]
-            print(self.language_var)
-
-            self.controller.show_frame("ApplicationWindow")
-          else:
-            messagebox.showerror("Error", "Incorrect username/password. Please try again.")
+              
     
 class SignUpWindow(tk.Frame):
   def __init__(self, parent, controller):
@@ -533,7 +530,7 @@ class SignUpWindow(tk.Frame):
     #opens database
     self.conn = sqlite3.connect('database.db')  
     self.cursor = self.conn.cursor()
-
+    
     #username entry
     tk.Label(self, text="Create Username:").pack(padx=10, pady=10)
     self.newUsernameEntry = tk.Entry(self,bd = 5)
@@ -588,6 +585,12 @@ class SignUpWindow(tk.Frame):
             self.newUsernameEntry.delete(0, 'end')
           else:
              usernameValid = True
+
+      elif self.newUsername == "":
+        messagebox.showerror("Error", "Invalid Entry/Account username already in use. Please try again.")
+      
+      elif len(database) == 0:
+         usernameValid = True
   
     
     hasDigit = False
@@ -633,6 +636,19 @@ class SignUpWindow(tk.Frame):
 
       self.cursor.execute(data_insert_query,data_insert_tuple)
       self.conn.commit()
+
+      #creating respective row in accountInfo.db for extra account info/preferences
+      self.accInfo = sqlite3.connect('accountInfo.db')
+      self.accInfoCursor = self.accInfo.cursor()
+      data_insert_query = ('''INSERT INTO ACC_INFO(
+                          EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
+                          (?, ?, ?, ?)
+                          ''')
+    
+      data_insert_tuple = (accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
+
+      self.accInfoCursor.execute(data_insert_query,data_insert_tuple)
+      self.accInfo.commit()
       
       messagebox.showinfo("Account Created", "You have successfully created a new account.")
 
@@ -1024,7 +1040,7 @@ class MainWindow(tk.Tk):
     self.show_frame("MainMenu")
 
     #creation of sqlite database
-    conn = sqlite3.connect('database.db')
+    database = sqlite3.connect('database.db')
     table_create_query = '''CREATE TABLE IF NOT EXISTS USER_DATA(
                     USERNAME TEXT, 
                     PASSWORD TEXT, 
@@ -1032,8 +1048,18 @@ class MainWindow(tk.Tk):
                     LASTNAME TEXT
     )'''
 
+    database.execute(table_create_query)
+    
+    #creation of sqlite table for account information
+    accInfo = sqlite3.connect('accountInfo.db')
+    table_create_query = '''CREATE TABLE IF NOT EXISTS ACC_INFO(
+                    EMAIL_PREF INT, 
+                    SMS_PREF INT, 
+                    TA_PREF INT,
+                    LANG_PREF TEXT 
+    )'''
 
-    conn.execute(table_create_query)
+    accInfo.execute(table_create_query)
     
 
 
