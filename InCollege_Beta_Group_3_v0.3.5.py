@@ -560,8 +560,7 @@ class SignUpWindow(tk.Frame):
     count = 0
     self.cursor.execute('''SELECT * from USER_DATA''')
     database = self.cursor.fetchall()
-    print(database)
-
+    
     usernameValid = False
     passwordValid = False
     fullNameValid = False
@@ -626,29 +625,16 @@ class SignUpWindow(tk.Frame):
 
     if usernameValid is True and passwordValid is True and fullNameValid is True:
       data_insert_query = ('''INSERT INTO USER_DATA(
-                          USERNAME, PASSWORD, FIRSTNAME, LASTNAME) VALUES
-                          (?, ?, ?, ?)
+                          USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
+                          (?, ?, ?, ?, ?, ?, ?, ?)
                           ''')
     
     
       #executed through tuples since insert query cant read from variable
-      data_insert_tuple = (self.newUsername, self.newPassword, self.firstName, self.lastName)
+      data_insert_tuple = (self.newUsername, self.newPassword, self.firstName, self.lastName, accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
 
-      self.cursor.execute(data_insert_query,data_insert_tuple)
+      self.cursor.execute(data_insert_query, data_insert_tuple)
       self.conn.commit()
-
-      #creating respective row in accountInfo.db for extra account info/preferences
-      self.accInfo = sqlite3.connect('accountInfo.db')
-      self.accInfoCursor = self.accInfo.cursor()
-      data_insert_query = ('''INSERT INTO ACC_INFO(
-                          EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
-                          (?, ?, ?, ?)
-                          ''')
-    
-      data_insert_tuple = (accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
-
-      self.accInfoCursor.execute(data_insert_query,data_insert_tuple)
-      self.accInfo.commit()
       
       messagebox.showinfo("Account Created", "You have successfully created a new account.")
 
@@ -1045,29 +1031,16 @@ class MainWindow(tk.Tk):
                     USERNAME TEXT, 
                     PASSWORD TEXT, 
                     FIRSTNAME TEXT, 
-                    LASTNAME TEXT
+                    LASTNAME TEXT,
+                    EMAIL_PREF INT,
+                    SMS_PREF INT, 
+                    TA_PREF INT,
+                    LANG_PREF TEXT 
+
     )'''
 
     database.execute(table_create_query)
     
-    #creation of sqlite table for account information
-    accInfo = sqlite3.connect('accountInfo.db')
-    table_create_query = '''CREATE TABLE IF NOT EXISTS ACC_INFO(
-                    EMAIL_PREF INT, 
-                    SMS_PREF INT, 
-                    TA_PREF INT,
-                    LANG_PREF TEXT 
-    )'''
-
-    accInfo.execute(table_create_query)
-    
-
-
-    accFile = open("accounts.txt","r+")
-    accounts = accFile.readlines()
-    self.loadAccounts(accounts)
-
-
 
   def show_frame(self, frame_name):
     frame = self.framelist[frame_name]
