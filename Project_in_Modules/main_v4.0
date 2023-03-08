@@ -4,14 +4,14 @@
 #Christian Chow Quan 
 #Jason Barican
 #Jian Gong
-#Eloy Fernandes Ballesteros
-
 
 import tkinter as tk
 import sqlite3
 from tkinter import messagebox
+from tkinter import *
 import Important_Links as IL
 import Useful_Links as UL
+#import Profile_Functions as PF
 
 #global arrays to store account information during runtime
 
@@ -375,13 +375,13 @@ class SignUpWindow(tk.Frame):
 
     if usernameValid is True and passwordValid is True and fullNameValid is True:
       data_insert_query = ('''INSERT INTO USER_DATA(
-                          USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
-                          (?, ?, ?, ?, ?, ?, ?, ?)
+                          USER_ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
+                          (?, ?, ?, ?, ?, ?, ?, ?, ?)
                           ''')
-    
-    
+      count = 0
+      count += 1
       #executed through tuples since insert query cant read from variable
-      data_insert_tuple = (self.newUsername, self.newPassword, self.firstName, self.lastName, accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
+      data_insert_tuple = (count, self.newUsername, self.newPassword, self.firstName, self.lastName, accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
 
       self.cursor.execute(data_insert_query, data_insert_tuple)
       self.conn.commit()
@@ -429,6 +429,12 @@ class ApplicationWindow(tk.Frame):
     option_menu['menu'].entryconfig(2, command=lambda: controller.show_frame("UnderConstruction"))
     option_menu['menu'].entryconfig(3, command=lambda: controller.show_frame("UnderConstruction"))
 
+    CreateProfileButton = tk.Button(self, text = "Create Profile", command = lambda: controller.show_frame("ProfileFrame"))
+    CreateProfileButton.pack(padx = 10, pady = 10)
+
+    DisplayProfileButton = tk.Button(self, text = "Display Profile", command = lambda: controller.show_frame("DisplayProfileFrame"))
+    DisplayProfileButton.pack(padx = 10, pady = 10)
+
     jobSearchButton = tk.Button(self, text = "Job/Internship Search", command = lambda: controller.show_frame("JobSearchFrame"))
     jobSearchButton.pack(padx = 10, pady = 10)
 
@@ -441,8 +447,8 @@ class ApplicationWindow(tk.Frame):
     postJobButton = tk.Button(self, text = "Post a new job", command = lambda: controller.show_frame("AddJobFrame"))
     postJobButton.pack(padx = 10, pady = 10)
 
-    postJobButton = tk.Button(self, text = "Add friends", command = lambda: controller.show_frame("FriendFrame"))
-    postJobButton.pack(padx = 10, pady = 10)
+    FriendButton = tk.Button(self, text = "Add friends", command = lambda: controller.show_frame("FriendFrame"))
+    FriendButton.pack(padx = 10, pady = 10)
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
     exitButton.pack(padx = 10, pady = 10)
@@ -573,99 +579,160 @@ class JobSearchFrame(tk.Frame):
                           command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
 
-"""
 class FriendFrame(tk.Frame):
+
+  # Connect to the database
+
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
     self.controller = controller
+
+    
     # Create Scrollbar widget and Canvas widget
     scrollbar = tk.Scrollbar(self)
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
     self.canvas = tk.Canvas(self, yscrollcommand=scrollbar.set)
     self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     scrollbar.config(command=self.canvas.yview)
+
     # Create a Frame widget to contain all the elements and buttons
     self.frame = tk.Frame(self.canvas)
     self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
-    # Read the specified elements from the file
-    self.elements = self.read_file('accounts.txt', '"start"', '"end"')
-    # Display the elements and buttons in the Frame widget
-    self.add_elements()
+
+    # Add the Pending Requests LabelFrame
+    self.pending_frame = tk.LabelFrame(self.frame, text="Pending Requests")
+    self.pending_frame.pack(pady=10)
+
+    # Connect to the database
+    self.conn = sqlite3.connect('database.db')
+    # Retrieve the user's userid from the accounts table based on their username
+    global loginUsername
+    #self.main()
+  
+  def main(self):
+    cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE USERNAME = '{loginUsername}'")
+    userid = cursor.fetchone()
+    print(userid)
+
+    # Display the elements and buttons in the Pending Requests LabelFrame
+    
+    cursor = self.conn.execute(f"SELECT PENDING_FIRST, PENDING_LAST FROM PENDING WHERE USER_ID = '{userid}'")
+    self.pendingUsers = cursor.fetchall()
+    self.add_pending_elements(self.pending_frame)
+
+    # Add the Friends LabelFrame
+    friends_frame = tk.LabelFrame(self.frame, text="Friends")
+    friends_frame.pack(pady=10)
+
+    # Display the elements and buttons in the Friends LabelFrame
+    cursor = self.conn.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = '{userid}'")
+    self.friendUsers = cursor.fetchall()
+    self.add_friends_elements(friends_frame)
+
+    self.pending_frame = self.pending_frame
+    self.friends_frame = friends_frame
+
     # Allow the Canvas widget to automatically adjust its size
     self.frame.update_idletasks()
     self.canvas.config(scrollregion=self.canvas.bbox('all'))
-  def read_file(self, filename, start_elem, end_elem):
-    elements = []
-    with open(filename, 'r') as f:
-        content = f.read()
-        start_index = content.index(start_elem) + len(start_elem)
-        end_index = len(content)  # Assume end of file is end index
-        if end_elem in content[start_index:]:
-            end_index = content.index(end_elem, start_index)
-            # Split the content between start_elem and end_elem into elements
-            content_between = content[start_index:end_index]
-            elements = [e.strip() for e in content_between.split("\"")]
-        else:
-            end_index = len(content)  # Assume end of file is end index
-    return elements
-  
-  def add_elements(self):
-    if not self.elements:
-        # Display "No new request" if there are no elements
-        label = tk.Label(self.frame, text="No new request", width=50)
+
+  def add_pending_elements(self, frame):
+    # Clear the Frame widget before adding elements
+    for widget in frame.winfo_children():
+        widget.destroy()
+
+    if not self.pendingUsers:
+        label = tk.Label(frame, text="No new pending requests", width=50)
         label.grid(row=0, column=0, padx=5, pady=5)
     else:
         # Add elements and buttons to the Frame widget
-        for i, element in enumerate(self.elements):
-            label = tk.Label(self.frame, text=element, width=50)
+        for i, element in enumerate(self.pendingUsers):
+            label = tk.Label(frame, text=element, width=50)
             label.grid(row=i, column=0, padx=5, pady=5)
-            button1 = tk.Button(self.frame, text='reject', command=lambda element=element: self.delete_element(element))
+            button1 = tk.Button(frame, text='reject', command=lambda element=element: self.delete_element(element))
             button1.grid(row=i, column=1, padx=5, pady=5)
-            button2 = tk.Button(self.frame, text='accept', command=lambda element=element: self.move_element(element))
+            button2 = tk.Button(frame, text='accept', command=lambda element=element: self.move_element(element))
             button2.grid(row=i, column=2, padx=5, pady=5)
-    backButton = tk.Button(self, text = "Back", command = lambda: self.controller.show_frame("ApplicationWindow"))
-    backButton.pack(padx=5, pady=5)
+
+  def add_friends_elements(self, frame):
+    # Clear the Frame widget before adding elements
+    for widget in frame.winfo_children():
+        widget.destroy()
+
+    if not self.friendUsers:
+        label = tk.Label(frame, text="Don't have any friends yet", width=50)
+        label.grid(row=0, column=0, padx=5, pady=5)
+    else:
+        # Add elements and buttons to the Frame widget
+        for i, element in enumerate(self.friendUsers):
+            label = tk.Label(frame, text=element, width=50)
+            label.grid(row=i, column=0, padx=5, pady=5)
+            button1 = tk.Button(frame, text='disconnect', command=lambda element=element: self.disconnect_element(element))
+            button1.grid(row=i, column=1, padx=5, pady=5)
+
+    # Add back button
+    backButton = tk.Button(frame, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
+    backButton.grid(row=len(self.friendUsers)+1, column=0, padx=5, pady=5)
+
+  #delete request from pending table
   def delete_element(self, element):
-    # Read the file and remove the specified element
-    with open('accounts.txt', 'r') as f:
-        lines = f.readlines()
-    with open('accounts.txt', 'w') as f:
-        for line in lines:
-            if element not in line:
-                f.write(line)
-            else:
-                # Remove the specified element from the line
-                line = line.replace(element, "")
-                line = line.replace('""', '"')
-                f.write(line)
+    self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND PENDING_FIRST = '{element[0]}' AND pendingLast = '{element[1]}'")
+    self.conn.commit()
+    self.pendingUsers.remove(element)
     self.update_frame()
+  
+  #move user to friends table
   def move_element(self, element):
-# Read the contents of the file into a variable
-    with open('accounts.txt', 'r') as f:
-        content = f.read()
-    # Find the index of the "end" tag
-    end_index = content.find('"end"')
-    # Delete the element if it exists in the file
-    if element in content:
-        content = content.replace(element, '')
-    # Write the updated content back to the file
-    with open('accounts.txt', 'w') as f:
-        content = content.replace('""', '"')
-        f.write(content)
-    # Update the Frame widget
+    self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({self.userid}, '{element[0]}', '{element[1]}')")
+    self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND pendingFirst = '{element[0]}' AND PENDING_LAST = '{element[1]}'")
+    self.conn.commit()
+    self.pendingUsers.remove(element)
+    self.friendUsers.append((element[0], element[1]))
+    cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = '{element[0]}' AND LASTNAME = '{element[1]}'")
+    friend_userid = cursor.fetchone()[0]
+    self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES (?, ?, ?)", (friend_userid, self.myfirst, self.mylast))
+    self.conn.commit()
     self.update_frame()
+
+  #remove user from friends table
+  def disconnect_element(self, element):
+    #delete my friend
+    self.conn.execute(f"DELETE FROM FRIENDS WHERE USER_ID = {self.userid} AND FRIEND_FIRST = '{element[0]}' AND FRIEND_LAST = '{element[1]}'")
+    self.conn.commit()
+    #delete friend's friend(me)
+    cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = '{element[0]}' AND LASTNAME = '{element[1]}'")
+    friend_userid = cursor.fetchone()[0]
+    #self.conn.execute(f"DELETE FROM friends (userid, friendFirst, friendLast) VALUES (?, ?, ?)", (friend_userid, self.myfirst, self.mylast))
+    self.conn.execute(f"DELETE FROM FRIENDS WHERE USER_ID = {friend_userid} AND FRIEND_FIRST = '{self.myfirst}' AND FRIEND_LAST = '{self.mylast}'")       
+    self.conn.commit()
+    self.friendUsers.remove(element)
+    self.update_frame()
+
   def update_frame(self):
-    # Reload the elements
-    self.elements = self.read_file('accounts.txt', '"start"', '"end"')
-    # Update the Frame widget
-    self.frame.destroy()
-    self.frame = tk.Frame(self.canvas)
-    self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
-    self.add_elements()
+    self.add_pending_elements(self.pending_frame)
+    self.add_friends_elements(self.friends_frame)
+    self.frame.update_idletasks()
+    self.canvas.config(scrollregion=self.canvas.bbox('all'))
+
+  def add_elements(self):
+    # Clear the Frame widget before adding elements
+    for widget in self.frame.winfo_children():
+        widget.destroy()
+
+    # Add pending requests label frame and elements
+    pendingFrame = tk.LabelFrame(self.frame, text="Pending Requests")
+    pendingFrame.pack(side=tk.TOP, fill=tk.BOTH, padx=5, pady=5, expand=True)
+    self.add_pending_elements(pendingFrame)
+
+    # Add friends label frame and elements
+    friendsFrame = tk.LabelFrame(self.frame, text="Friends")
+    friendsFrame.pack(side=tk.TOP, fill=tk.BOTH, padx=5, pady=5, expand=True)
+    self.add_friends_elements(friendsFrame)
+
     # Allow the Canvas widget to automatically adjust its size
     self.frame.update_idletasks()
     self.canvas.config(scrollregion=self.canvas.bbox('all'))
-"""
+
 
 
 class AddJobFrame(tk.Frame):
@@ -730,6 +797,193 @@ class AddJobFrame(tk.Frame):
       result_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
 
 
+
+class ProfileFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        self.controller = controller
+
+        # create label for title
+        title_label = Label(self, text="Title:")
+        title_label.grid(row=0, column=0, padx=10, pady=10)
+
+        # create entry for title
+        title_entry = Entry(self)
+        title_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        # create label for major
+        major_label = Label(self, text="Major:")
+        major_label.grid(row=1, column=0, padx=10, pady=10)
+
+        # create entry for major
+        major_entry = Entry(self)
+        major_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        # create label for university
+        university_label = Label(self, text="University:")
+        university_label.grid(row=2, column=0, padx=10, pady=10)
+
+        # create entry for university
+        university_entry = Entry(self)
+        university_entry.grid(row=2, column=1, padx=10, pady=10)
+
+        # create label for about
+        about_label = Label(self, text="About:")
+        about_label.grid(row=3, column=0, padx=10, pady=10)
+
+        # create text box for about
+        about_text = Text(self, height=5, width=50)
+        about_text.grid(row=3, column=1, padx=10, pady=10)
+
+
+        # create label for experience
+        experience_label = Label(self, text="Experience:")
+        experience_label.grid(row=4, column=0, padx=10, pady=10)
+
+        # create text box for experience
+        experience_text = Text(self, height=5, width=50)
+        experience_text.grid(row=4, column=1, padx=10, pady=10)
+
+
+        # create label for education
+        education_label = Label(self, text="Education:")
+        education_label.grid(row=5, column=0, padx=10, pady=10)
+
+        # create label for school name
+        school_name_label = Label(self, text="School Name:")
+        school_name_label.grid(row=6, column=0, padx=10, pady=10)
+
+        # create entry for school name
+        school_name_entry = Entry(self)
+        school_name_entry.grid(row=6, column=1, padx=10, pady=10)
+
+        # create label for degree
+        degree_label = Label(self, text="Degree:")
+        degree_label.grid(row=7, column=0, padx=10, pady=10)
+
+        # create entry for degree
+        degree_entry = Entry(self)
+        degree_entry.grid(row=7, column=1, padx=10, pady=10)
+
+        # create label for years attended
+        years_attended_label = Label(self, text="Years Attended:")
+        years_attended_label.grid(row=8, column=0, padx=10, pady=10)
+
+        # create entry for years attended
+        years_attended_entry = Entry(self)
+        years_attended_entry.grid(row=8, column=1, padx=10, pady=10)
+
+        saveButton = tk.Button(self, text="Save", command=lambda: controller.show_frame("ApplicationWindow"))
+        saveButton.grid(row=9,column=1)
+
+        backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
+        backButton.grid(row=10,column=1)
+
+    # function to handle submit button click
+    def submit_profile(self):
+        # get values from input fields
+        title = self.title_entry.get()
+        major = self.major_entry.get().lower().title()  # convert to title case
+        university = self.university_entry.get().lower().title()
+        about = self.about_text.get("1.0", END)
+        experience = self.experience_text.get("1.0", END)
+        school_name = self.school_name_entry.get()
+        degree = self.degree_entry.get()
+        years_attended = self.years_attended_entry.get()
+        education = f"{degree} at {school_name}, {years_attended} years"
+
+        #inserting into database
+        database = sqlite3.connect('database.db')
+
+        data_insert_query = ("INSERT INTO PROFILE_DATA (USERNAME, Title, Major, University, About, Experience, Education) \
+        VALUES (?,?,?,?,?,?)")
+
+        global loginUsername
+
+        data_insert_tuple = (loginUsername, title, major, university, about, experience, education)
+
+        database.execute(data_insert_query, data_insert_tuple)
+        database.commit()
+
+        database.close()
+        
+        # create submit button
+        submit_button = Button(self.root, text="Save", command=self.submit_profile)
+        submit_button.grid(row=6, column=1, padx=10, pady=10)
+
+        self.root.mainloop()
+
+
+class DisplayProfileFrame(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        self.controller = controller
+
+        # connect to the database
+        database = sqlite3.connect('database.db')
+        self.cursor = database.cursor()
+
+        self.profile = {'title': '',
+            'major': '',
+            'university': '',
+            'info': '',
+            'about': '',
+            'experience': '',
+            'education': ''}
+
+        self.bind("<<ShowFrame>>", self.on_show_frame)
+
+        title_label = tk.Label(self, text=f"Title: {self.profile['title']}")
+        title_label.grid(row=0, column=0, padx=10, pady=10)
+
+        major_label = tk.Label(self, text=f"Major: {self.profile['major']}")
+        major_label.grid(row=1, column=0, padx=10, pady=10)
+
+        university_label = tk.Label(self, text=f"University: {self.profile['university']}")
+        university_label.grid(row=2, column=0, padx=10, pady=10)
+
+        info_label = tk.Label(self, text=f"Info: {self.profile['info']}")
+        info_label.grid(row=3, column=0, padx=10, pady=10)
+
+        experience_label = tk.Label(self, text="Experience:")
+        experience_label.grid(row=4, column=0, padx=10, pady=10)
+        for experience in self.profile['experience']:
+            experience_line_label = tk.Label(self, text=f"- {experience}")
+            experience_line_label.grid(row=5, column=0, padx=10, pady=10)
+
+        education_label = tk.Label(self, text="Education:")
+        education_label.grid(row=6, column=0, padx=10, pady=10)
+        for education in self.profile['education']:
+            education_line_label = tk.Label(self, text=f"- {education}")
+            education_line_label.grid(row=7, column=0, padx=10, pady=10)
+        
+        backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
+        backButton.grid(row=8,column=1)
+    
+
+    def on_show_frame(self, event):
+        # retrieve the profile information from the database
+
+        global loginUsername
+        profile_data_query=("SELECT * FROM PROFILE_DATA WHERE USERNAME='"+ loginUsername +"'")
+
+
+        self.cursor.execute(profile_data_query)
+        profile_data = self.cursor.fetchone()
+
+
+        # convert the retrieved data to a dictionary
+        self.profile = {
+            'title': profile_data[0],
+            'major': profile_data[1],
+            'university': profile_data[2],
+            'about': profile_data[3],
+            'experience': profile_data[4].split('\n') if profile_data[4] else [],
+            'education': profile_data[5].split('\n') if profile_data[5] else []
+        }
+
+
+
 class MainWindow(tk.Tk):
   def __init__(self, *args, **kwargs):
     tk.Tk.__init__(self, *args, **kwargs)
@@ -741,12 +995,12 @@ class MainWindow(tk.Tk):
 
     for F in (MainMenu, LoginWindow, SignUpWindow,
               VideoWindow, ApplicationWindow, LearnSkillWindow,
-              FindSomeoneFrame, JobSearchFrame, AddJobFrame, IL.CopyrightNoticeFrame,
+              FindSomeoneFrame, JobSearchFrame, AddJobFrame, DisplayProfileFrame, ProfileFrame, IL.CopyrightNoticeFrame,
               IL.InCollegeAboutFrame, IL.AccessibilityNoticeFrame, IL.UserAgreementFrame,
               IL.PrivacyPolicyFrame, IL.CookiePolicyFrame, IL.CopyrightPolicyFrame,
               IL.BrandPolicyFrame, GuestControlsFrame, LanguageFrame,
               GeneralWindow, UL.HelpCenterFrame, UL.AboutFrame, 
-              UL.PressFrame, UnderConstruction):
+              UL.PressFrame, UnderConstruction, FriendFrame):
 
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
@@ -758,6 +1012,7 @@ class MainWindow(tk.Tk):
     #creation of sqlite database
     database = sqlite3.connect('database.db')
     table_create_query = '''CREATE TABLE IF NOT EXISTS USER_DATA(
+                    USER_ID INT,
                     USERNAME TEXT, 
                     PASSWORD TEXT, 
                     FIRSTNAME TEXT, 
@@ -765,11 +1020,50 @@ class MainWindow(tk.Tk):
                     EMAIL_PREF INT,
                     SMS_PREF INT, 
                     TA_PREF INT,
-                    LANG_PREF TEXT 
+                    LANG_PREF TEXT,
+                    PRIMARY KEY (USERNAME)
     )'''
 
     database.execute(table_create_query)
     
+
+    
+    profile_table_query = '''CREATE TABLE IF NOT EXISTS PROFILE_DATA(
+                        USERNAME TEXT,
+                        Title TEXT, 
+                        Major TEXT, 
+                        University TEXT, 
+                        About TEXT,
+                        Experience INT,
+                        Education INT,
+                        PRIMARY KEY (USERNAME),
+                        FOREIGN KEY (USERNAME) REFERENCES USER_DATA(USERNAME)
+    )'''
+    
+    database.execute(profile_table_query)
+
+
+
+    friends_query = '''CREATE TABLE IF NOT EXISTS FRIENDS(
+                    USER_ID INT,
+                    FRIEND_FIRST TEXT,
+                    FRIEND_LAST TEXT
+
+    )'''
+
+    database.execute(friends_query)
+
+
+
+    pending_query = '''CREATE TABLE IF NOT EXISTS PENDING(
+                    USER_ID INT,
+                    PENDING_FIRST TEXT,
+                    PENDING_LAST TEXT
+
+    )'''
+
+    database.execute(pending_query)
+
 
   def show_frame(self, frame_name):
     frame = self.framelist[frame_name]
