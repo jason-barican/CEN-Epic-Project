@@ -125,10 +125,6 @@ class ProfileFrame(Frame):
 
         self.root.mainloop()
 
-root = Tk()
-app = ProfileFrame(master=root)
-app.mainloop()
-
 def retrieve_profile(username):
     # connect to the database
     database = sqlite3.connect('database.db')
