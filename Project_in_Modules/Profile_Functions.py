@@ -129,7 +129,7 @@ root = Tk()
 app = ProfileFrame(master=root)
 app.mainloop()
 
-def retrieve_profile():
+def retrieve_profile(username):
     # connect to the database
     database = sqlite3.connect('database.db')
     cursor = database.cursor()
@@ -137,7 +137,7 @@ def retrieve_profile():
     # retrieve the profile information from the database
     profile_data_query=("SELECT * FROM PROFILE_DATA WHERE USERNAME='?'")
 
-    #cursor.execute(profile_data_query, loginUsername)
+    #cursor.execute(profile_data_query, username)
     profile_data = cursor.fetchone()
 
     # close the database connection
