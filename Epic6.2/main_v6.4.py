@@ -318,6 +318,8 @@ class LoginWindow(tk.Frame):
     self.databaseCursor.execute("SELECT * from USER_DATA")
     accounts = self.databaseCursor.fetchall()
 
+    print(accounts)
+
     for i in range(0, len(accounts)):
       if loginUsername in accounts[i]:
         if loginPassword in accounts[i]:
@@ -373,7 +375,7 @@ class SignUpWindow(tk.Frame):
 
     count += len(database)
     
-    if count >= 10:
+    if count >= 5:
       tk.Label(self, text="All permitted accounts have been created. Please come back later.").pack(padx=10, pady=10)
     else:
       self.newUsername = self.newUsernameEntry.get().replace(" ","")
@@ -434,7 +436,7 @@ class SignUpWindow(tk.Frame):
                           USER_ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
                           (?, ?, ?, ?, ?, ?, ?, ?, ?)
                           ''')
-      count = 0
+      
       count += 1
       #executed through tuples since insert query cant read from variable
       data_insert_tuple = (count, self.newUsername, self.newPassword, self.firstName, self.lastName, accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
@@ -503,7 +505,7 @@ class ApplicationWindow(tk.Frame):
     postJobButton = tk.Button(self, text = "Post a new job", command = lambda: controller.show_frame("AddJobFrame"))
     postJobButton.pack(padx = 10, pady = 10)
 
-    FriendButton = tk.Button(self, text = "Show my network", command = lambda: controller.show_frame("FriendFrame"))
+    FriendButton = tk.Button(self, text = "Add friends", command = lambda: controller.show_frame("FriendFrame"))
     FriendButton.pack(padx = 10, pady = 10)
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
@@ -662,57 +664,60 @@ class JobSearchFrame(tk.Frame):
 
 class FriendFrame(tk.Frame):
 
+  # Connect to the database
+
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
     self.controller = controller
 
-    self.bind("<<ShowFrame>>", self.on_show_frame)
+    
+    # Create Scrollbar widget and Canvas widget
+    scrollbar = tk.Scrollbar(self)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    self.canvas = tk.Canvas(self, yscrollcommand=scrollbar.set)
+    self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.config(command=self.canvas.yview)
+
+    # Create a Frame widget to contain all the elements and buttons
+    self.frame = tk.Frame(self.canvas)
+    self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
+
+    # Add the Pending Requests LabelFrame
+    self.pending_frame = tk.LabelFrame(self.frame, text="Pending Requests")
+    self.pending_frame.pack(pady=10)
+
+    # Connect to the database
+    self.conn = sqlite3.connect('database.db')
+    # Retrieve the user's userid from the accounts table based on their username
+    global loginUsername
+    #self.main()
   
-  def on_show_frame(self, event):
-      global loginUsername
-
-      # Create Scrollbar widget and Canvas widget
-      scrollbar = tk.Scrollbar(self)
-      scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-      self.canvas = tk.Canvas(self, yscrollcommand=scrollbar.set)
-      self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-      scrollbar.config(command=self.canvas.yview)
-
-      # Create a Frame widget to contain all the elements and buttons
-      self.frame = tk.Frame(self.canvas)
-      self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
-
-      # Add the Pending Requests LabelFrame
-      if not hasattr(self, 'pending_frame'):
-        self.pending_frame = tk.LabelFrame(self.frame, text="Pending Requests")
-        self.pending_frame.pack(pady=10)
-
-      self.conn = sqlite3.connect('database.db')
-      cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE USERNAME = '{loginUsername}'")
-      userid = cursor.fetchone()[0]
-      self.userid=userid
-      self.myfirst = self.conn.execute(f"SELECT FIRSTNAME FROM USER_DATA WHERE USER_ID = {userid}").fetchone()[0]
-      self.mylast = self.conn.execute(f"SELECT LASTNAME FROM USER_DATA WHERE USER_ID = {userid}").fetchone()[0]
+  def main(self):
+    cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE USERNAME = '{loginUsername}'")
+    userid = cursor.fetchone()
+    print(userid)
 
     # Display the elements and buttons in the Pending Requests LabelFrame
     
-      cursor = self.conn.execute(f"SELECT PENDING_FIRST, PENDING_LAST FROM PENDING WHERE USER_ID = '{userid}'")
-      self.pendingUsers = cursor.fetchall()
-      self.add_pending_elements(self.pending_frame)
+    cursor = self.conn.execute(f"SELECT PENDING_FIRST, PENDING_LAST FROM PENDING WHERE USER_ID = '{userid}'")
+    self.pendingUsers = cursor.fetchall()
+    self.add_pending_elements(self.pending_frame)
 
-      # Add the Friends LabelFrame
-      if not hasattr(self, 'friends_frame'):
-        self.friends_frame = tk.LabelFrame(self.frame, text="Friends")
-        self.friends_frame.pack(pady=10)
+    # Add the Friends LabelFrame
+    friends_frame = tk.LabelFrame(self.frame, text="Friends")
+    friends_frame.pack(pady=10)
 
-      # Display the elements and buttons in the Friends LabelFrame
-      cursor = self.conn.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = '{userid}'")
-      self.friendUsers = cursor.fetchall()
-      self.add_friends_elements(self.friends_frame)
+    # Display the elements and buttons in the Friends LabelFrame
+    cursor = self.conn.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = '{userid}'")
+    self.friendUsers = cursor.fetchall()
+    self.add_friends_elements(friends_frame)
 
-      # Allow the Canvas widget to automatically adjust its size
-      self.frame.update_idletasks()
-      self.canvas.config(scrollregion=self.canvas.bbox('all'))
+    self.pending_frame = self.pending_frame
+    self.friends_frame = friends_frame
+
+    # Allow the Canvas widget to automatically adjust its size
+    self.frame.update_idletasks()
+    self.canvas.config(scrollregion=self.canvas.bbox('all'))
 
   def add_pending_elements(self, frame):
     # Clear the Frame widget before adding elements
@@ -752,23 +757,23 @@ class FriendFrame(tk.Frame):
     backButton = tk.Button(frame, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
     backButton.grid(row=len(self.friendUsers)+1, column=0, padx=5, pady=5)
 
-    #delete request from pending table
+  #delete request from pending table
   def delete_element(self, element):
-    self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND PENDING_FIRST = '{element[0]}' AND PENDING_LAST = '{element[1]}'")
+    self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND PENDING_FIRST = '{element[0]}' AND pendingLast = '{element[1]}'")
     self.conn.commit()
     self.pendingUsers.remove(element)
     self.update_frame()
-
-      #move user to friends table
+  
+  #move user to friends table
   def move_element(self, element):
     self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({self.userid}, '{element[0]}', '{element[1]}')")
-    self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND PENDING_FIRST = '{element[0]}' AND PENDING_LAST = '{element[1]}'")
+    self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND pendingFirst = '{element[0]}' AND PENDING_LAST = '{element[1]}'")
     self.conn.commit()
     self.pendingUsers.remove(element)
     self.friendUsers.append((element[0], element[1]))
     cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = '{element[0]}' AND LASTNAME = '{element[1]}'")
     friend_userid = cursor.fetchone()[0]
-    self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({friend_userid}, '{self.myfirst}', '{self.mylast}')")
+    self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES (?, ?, ?)", (friend_userid, self.myfirst, self.mylast))
     self.conn.commit()
     self.update_frame()
 
@@ -819,6 +824,9 @@ class AddJobFrame(tk.Frame):
     self.controller = controller
     self.create_widgets()
 
+    self.conn = sqlite3.connect('database.db')  
+    self.cursor = self.conn.cursor()
+
   def create_widgets(self):
       self.title_label = tk.Label(self, text="Enter title:")
       self.title_entry = tk.Entry(self)
@@ -852,15 +860,14 @@ class AddJobFrame(tk.Frame):
       self.back_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
 
   def post_job(self):
-      jobFile = open("jobs.txt","r+")
       global loginUsername
-      jobs = jobFile.readlines()
       count = 0
-      for job in jobs:
-        count += 1
+      jobs = self.cursor.fetchall()
+      
+      count += len(jobs)
 
       #checking if amount of accounts has exceeded maximum
-      if count >= 5:
+      if count >= 10:
         result_text = "All permitted jobs have been created, please come back later"
       else:
         title = self.title_entry.get()
@@ -868,7 +875,18 @@ class AddJobFrame(tk.Frame):
         employer = self.employer_entry.get()
         location = self.location_entry.get()
         salary = self.salary_entry.get()
-        jobFile.write(title + " " + description + " " + employer + " " + location + " " + salary + " " + loginUsername +"\n")
+
+        data_insert_query = ('''INSERT INTO JOB_DATA(
+                            TITLE, DESCRIPTION, EMPLOYER, LOCATION, SALARY) VALUES
+                            (?, ?, ?, ?, ?)
+                            ''')
+
+        data_insert_tuple = (title, description, employer, location, salary)
+        
+        self.cursor.execute(data_insert_query, data_insert_tuple)
+        self.conn.commit()
+
+        
         result_text = "New job posted!"
 
       result_label = tk.Label(self, text=result_text)
@@ -880,84 +898,82 @@ class ProfileFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        self.conn = sqlite3.connect('database.db')  
-        self.cursor = self.conn.cursor()
 
         # create label for title
-        self.title_label = Label(self, text="Title:")
-        self.title_label.grid(row=0, column=0, padx=10, pady=10)
+        title_label = Label(self, text="Title:")
+        title_label.grid(row=0, column=0, padx=10, pady=10)
 
         # create entry for title
-        self.title_entry = Entry(self)
-        self.title_entry.grid(row=0, column=1, padx=10, pady=10)
+        title_entry = Entry(self)
+        title_entry.grid(row=0, column=1, padx=10, pady=10)
 
         # create label for major
-        self.major_label = Label(self, text="Major:")
-        self.major_label.grid(row=1, column=0, padx=10, pady=10)
+        major_label = Label(self, text="Major:")
+        major_label.grid(row=1, column=0, padx=10, pady=10)
 
         # create entry for major
-        self.major_entry = Entry(self)
-        self.major_entry.grid(row=1, column=1, padx=10, pady=10)
+        major_entry = Entry(self)
+        major_entry.grid(row=1, column=1, padx=10, pady=10)
 
         # create label for university
-        self.university_label = Label(self, text="University:")
-        self.university_label.grid(row=2, column=0, padx=10, pady=10)
+        university_label = Label(self, text="University:")
+        university_label.grid(row=2, column=0, padx=10, pady=10)
 
         # create entry for university
-        self.university_entry = Entry(self)
-        self.university_entry.grid(row=2, column=1, padx=10, pady=10)
+        university_entry = Entry(self)
+        university_entry.grid(row=2, column=1, padx=10, pady=10)
 
         # create label for about
-        self.about_label = Label(self, text="About:")
-        self.about_label.grid(row=3, column=0, padx=10, pady=10)
+        about_label = Label(self, text="About:")
+        about_label.grid(row=3, column=0, padx=10, pady=10)
 
         # create text box for about
-        self.about_text = Text(self, height=5, width=50)
-        self.about_text.grid(row=3, column=1, padx=10, pady=10)
+        about_text = Text(self, height=5, width=50)
+        about_text.grid(row=3, column=1, padx=10, pady=10)
 
 
         # create label for experience
-        self.experience_label = Label(self, text="Experience:")
-        self.experience_label.grid(row=4, column=0, padx=10, pady=10)
+        experience_label = Label(self, text="Experience:")
+        experience_label.grid(row=4, column=0, padx=10, pady=10)
 
         # create text box for experience
-        self.experience_text = Text(self, height=5, width=50)
-        self.experience_text.grid(row=4, column=1, padx=10, pady=10)
+        experience_text = Text(self, height=5, width=50)
+        experience_text.grid(row=4, column=1, padx=10, pady=10)
 
 
         # create label for education
-        self.education_label = Label(self, text="Education:")
-        self.education_label.grid(row=5, column=0, padx=10, pady=10)
+        education_label = Label(self, text="Education:")
+        education_label.grid(row=5, column=0, padx=10, pady=10)
 
         # create label for school name
-        self.school_name_label = Label(self, text="School Name:")
-        self.school_name_label.grid(row=6, column=0, padx=10, pady=10)
+        school_name_label = Label(self, text="School Name:")
+        school_name_label.grid(row=6, column=0, padx=10, pady=10)
 
         # create entry for school name
-        self.school_name_entry = Entry(self)
-        self.school_name_entry.grid(row=6, column=1, padx=10, pady=10)
+        school_name_entry = Entry(self)
+        school_name_entry.grid(row=6, column=1, padx=10, pady=10)
 
         # create label for degree
-        self.degree_label = Label(self, text="Degree:")
-        self.degree_label.grid(row=7, column=0, padx=10, pady=10)
+        degree_label = Label(self, text="Degree:")
+        degree_label.grid(row=7, column=0, padx=10, pady=10)
 
         # create entry for degree
-        self.degree_entry = Entry(self)
-        self.degree_entry.grid(row=7, column=1, padx=10, pady=10)
+        degree_entry = Entry(self)
+        degree_entry.grid(row=7, column=1, padx=10, pady=10)
 
         # create label for years attended
-        self.years_attended_label = Label(self, text="Years Attended:")
-        self.years_attended_label.grid(row=8, column=0, padx=10, pady=10)
+        years_attended_label = Label(self, text="Years Attended:")
+        years_attended_label.grid(row=8, column=0, padx=10, pady=10)
 
         # create entry for years attended
-        self.years_attended_entry = Entry(self)
-        self.years_attended_entry.grid(row=8, column=1, padx=10, pady=10)
+        years_attended_entry = Entry(self)
+        years_attended_entry.grid(row=8, column=1, padx=10, pady=10)
 
-        self.saveButton = tk.Button(self, text="Save", command = self.submit_profile )
-        self.saveButton.grid(row=9,column=1)
+        saveButton = tk.Button(self, text="Save", command=lambda: controller.show_frame("ApplicationWindow"))
+        saveButton.grid(row=9,column=1)
 
-        self.backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
-        self.backButton.grid(row=10,column=1)
+        backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
+        backButton.grid(row=10,column=1)
 
     # function to handle submit button click
     def submit_profile(self):
@@ -973,26 +989,25 @@ class ProfileFrame(tk.Frame):
         education = f"{degree} at {school_name}, {years_attended} years"
 
         #inserting into database
-        #database = sqlite3.connect('database.db')
+        database = sqlite3.connect('database.db')
 
-        data_insert_query = ('''INSERT INTO PROFILE_DATA (USERNAME, Title, Major, University, About, Experience, Education) VALUES (?,?,?,?,?,?,?) ON CONFLICT (USERNAME) DO UPDATE SET 
-        Title = excluded.Title,
-        Major = excluded.Major,
-        University = excluded.University,
-        About = excluded.About,
-        Experience = excluded.Experience,
-        Education = excluded.Education;''')
+        data_insert_query = ("INSERT INTO PROFILE_DATA (USERNAME, Title, Major, University, About, Experience, Education) \
+        VALUES (?,?,?,?,?,?)")
 
         global loginUsername
+
         data_insert_tuple = (loginUsername, title, major, university, about, experience, education)
 
-        self.cursor.execute(data_insert_query, data_insert_tuple)
-        self.conn.commit()
+        database.execute(data_insert_query, data_insert_tuple)
+        database.commit()
 
-        self.conn.close()
-
-        self.controller.show_frame("ApplicationWindow")
+        database.close()
         
+        # create submit button
+        submit_button = Button(self.root, text="Save", command=self.submit_profile)
+        submit_button.grid(row=6, column=1, padx=10, pady=10)
+
+        self.root.mainloop()
 
 
 class DisplayProfileFrame(tk.Frame):
@@ -1003,8 +1018,7 @@ class DisplayProfileFrame(tk.Frame):
         # connect to the database
         database = sqlite3.connect('database.db')
         self.cursor = database.cursor()
-        global loginUsername
-        self.profUsername = loginUsername
+
         self.profile = {'title': '',
             'major': '',
             'university': '',
@@ -1015,67 +1029,54 @@ class DisplayProfileFrame(tk.Frame):
 
         self.bind("<<ShowFrame>>", self.on_show_frame)
 
-        self.name_label = tk.Label(self, text=f""+self.profUsername)
-        self.name_label.grid(row=0, column=0, padx=10, pady=10)
+        title_label = tk.Label(self, text=f"Title: {self.profile['title']}")
+        title_label.grid(row=0, column=0, padx=10, pady=10)
 
-        self.title_label = tk.Label(self, text=f"Title: {self.profile['title']}")
-        self.title_label.grid(row=1, column=0, padx=10, pady=10)
+        major_label = tk.Label(self, text=f"Major: {self.profile['major']}")
+        major_label.grid(row=1, column=0, padx=10, pady=10)
 
-        self.major_label = tk.Label(self, text=f"Major: {self.profile['major']}")
-        self.major_label.grid(row=2, column=0, padx=10, pady=10)
+        university_label = tk.Label(self, text=f"University: {self.profile['university']}")
+        university_label.grid(row=2, column=0, padx=10, pady=10)
 
-        self.university_label = tk.Label(self, text=f"University: {self.profile['university']}")
-        self.university_label.grid(row=3, column=0, padx=10, pady=10)
+        info_label = tk.Label(self, text=f"Info: {self.profile['info']}")
+        info_label.grid(row=3, column=0, padx=10, pady=10)
 
-        self.info_label = tk.Label(self, text=f"Info: {self.profile['info']}")
-        self.info_label.grid(row=4, column=0, padx=10, pady=10)
-
-        self.experience_label = tk.Label(self, text="Experience:")
-        self.experience_label.grid(row=5, column=0, padx=10, pady=10)
+        experience_label = tk.Label(self, text="Experience:")
+        experience_label.grid(row=4, column=0, padx=10, pady=10)
         for experience in self.profile['experience']:
             experience_line_label = tk.Label(self, text=f"- {experience}")
-            experience_line_label.grid(row=6, column=0, padx=10, pady=10)
+            experience_line_label.grid(row=5, column=0, padx=10, pady=10)
 
-        self.education_label = tk.Label(self, text="Education:")
-        self.education_label.grid(row=7, column=0, padx=10, pady=10)
+        education_label = tk.Label(self, text="Education:")
+        education_label.grid(row=6, column=0, padx=10, pady=10)
         for education in self.profile['education']:
             education_line_label = tk.Label(self, text=f"- {education}")
-            education_line_label.grid(row=8, column=0, padx=10, pady=10)
+            education_line_label.grid(row=7, column=0, padx=10, pady=10)
         
         backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
-        backButton.grid(row=9,column=1)
-
+        backButton.grid(row=8,column=1)
+    
 
     def on_show_frame(self, event):
         # retrieve the profile information from the database
 
         global loginUsername
         profile_data_query=("SELECT * FROM PROFILE_DATA WHERE USERNAME='"+ loginUsername +"'")
-        #print(loginUsername)
+
+
         self.cursor.execute(profile_data_query)
         profile_data = self.cursor.fetchone()
-        #print(profile_data)
-        
-        #profile_data = array('i', profile_data_tup)
+
+
         # convert the retrieved data to a dictionary
-        profUsername = profile_data[0]
         self.profile = {
-            'title': profile_data[1],
-            'major': profile_data[2],
-            'university': profile_data[3],
-            'about': profile_data[4],
-            'experience': profile_data[5].split('\n') if profile_data[4] else [],
-            'education': profile_data[6].split('\n') if profile_data[5] else []
+            'title': profile_data[0],
+            'major': profile_data[1],
+            'university': profile_data[2],
+            'about': profile_data[3],
+            'experience': profile_data[4].split('\n') if profile_data[4] else [],
+            'education': profile_data[5].split('\n') if profile_data[5] else []
         }
-        # update label text
-        self.profUsername = loginUsername
-        self.name_label['text'] = self.profUsername
-        self.title_label['text'] = f"Title: {self.profile['title']}"
-        self.major_label['text'] = f"Major: {self.profile['major']}"
-        self.university_label['text'] = f"University: {self.profile['university']}"
-        self.info_label['text'] = f"About: {self.profile['about']}"
-        self.experience_label['text'] = f"Experience: {self.profile['experience']}"
-        self.education_label['text'] = f"Education: {self.profile['education']}"
 
 
 
@@ -1116,15 +1117,23 @@ class MainWindow(tk.Tk):
                     SMS_PREF INT, 
                     TA_PREF INT,
                     LANG_PREF TEXT,
-                    PRIMARY KEY (USER_ID)
+                    PRIMARY KEY (USERNAME)
     )'''
 
     database.execute(table_create_query)
     
+    job_table_query = '''CREATE TABLE IF NOT EXISTS JOB_DATA(
+                        TITLE TEXT,
+                        DESCRIPTION TEXT,
+                        EMPLOYER TEXT,
+                        LOCATION TEXT,
+                        SALARY TEXT
+    )'''
 
+    database.execute(job_table_query)
+    
     
     profile_table_query = '''CREATE TABLE IF NOT EXISTS PROFILE_DATA(
-                        USER_ID INT,
                         USERNAME TEXT,
                         Title TEXT, 
                         Major TEXT, 
@@ -1132,7 +1141,8 @@ class MainWindow(tk.Tk):
                         About TEXT,
                         Experience INT,
                         Education INT,
-                        FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
+                        PRIMARY KEY (USERNAME),
+                        FOREIGN KEY (USERNAME) REFERENCES USER_DATA(USERNAME)
     )'''
     
     database.execute(profile_table_query)
@@ -1142,8 +1152,7 @@ class MainWindow(tk.Tk):
     friends_query = '''CREATE TABLE IF NOT EXISTS FRIENDS(
                     USER_ID INT,
                     FRIEND_FIRST TEXT,
-                    FRIEND_LAST TEXT,
-                    FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
+                    FRIEND_LAST TEXT
     )'''
 
     database.execute(friends_query)
@@ -1153,8 +1162,7 @@ class MainWindow(tk.Tk):
     pending_query = '''CREATE TABLE IF NOT EXISTS PENDING(
                     USER_ID INT,
                     PENDING_FIRST TEXT,
-                    PENDING_LAST TEXT,
-                    FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
+                    PENDING_LAST TEXT
     )'''
 
     database.execute(pending_query)
