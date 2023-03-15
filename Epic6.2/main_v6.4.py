@@ -503,7 +503,7 @@ class ApplicationWindow(tk.Frame):
     postJobButton = tk.Button(self, text = "Post a new job", command = lambda: controller.show_frame("AddJobFrame"))
     postJobButton.pack(padx = 10, pady = 10)
 
-    FriendButton = tk.Button(self, text = "Add friends", command = lambda: controller.show_frame("FriendFrame"))
+    FriendButton = tk.Button(self, text = "Show my network", command = lambda: controller.show_frame("FriendFrame"))
     FriendButton.pack(padx = 10, pady = 10)
 
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
