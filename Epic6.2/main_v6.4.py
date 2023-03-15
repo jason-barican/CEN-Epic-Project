@@ -373,7 +373,7 @@ class SignUpWindow(tk.Frame):
 
     count += len(database)
     
-    if count >= 5:
+    if count >= 10:
       tk.Label(self, text="All permitted accounts have been created. Please come back later.").pack(padx=10, pady=10)
     else:
       self.newUsername = self.newUsernameEntry.get().replace(" ","")
