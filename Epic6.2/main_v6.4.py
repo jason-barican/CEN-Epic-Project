@@ -861,7 +861,9 @@ class AddJobFrame(tk.Frame):
 
   def post_job(self):
       global loginUsername
+      
       count = 0
+      self.cursor.execute('''SELECT * from JOB_DATA''')
       jobs = self.cursor.fetchall()
       
       count += len(jobs)
