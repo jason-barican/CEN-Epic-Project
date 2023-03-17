@@ -1024,7 +1024,7 @@ class ProfileFrame(tk.Frame):
 
         #create label for experience description
         self.experience_description_label = Label(self, text="Job Description:")
-        self.experience_description_label.grid(row=10, column=1, padx=10, pady=10)
+        self.experience_description_label.grid(row=10, column=0, padx=10, pady=10)
 
         # create text box entry for experience description
         self.experience_description_entry = Text(self, height=5, width=50)
@@ -1057,7 +1057,7 @@ class ProfileFrame(tk.Frame):
     # function to handle submit button click
     def submit_profile(self):
         # get values from input fields
-        print("hello")
+        
         title = self.title_entry.get()
         major = self.major_entry.get().lower().title()  # convert to title case
         university = self.university_entry.get().lower().title()
@@ -1069,12 +1069,8 @@ class ProfileFrame(tk.Frame):
         experience_enddate = self.experience_enddate_entry.get()
         experience_location = self.experience_location_entry.get()
 
-        experience = f"""\nTitle: {experience_title}\n
-                        Employer: {experience_employer}\n
-                        Start Date: {experience_startdate}\n
-                        End Date {experience_enddate}\n
-                        Location: {experience_location}
-                      """
+        experience = f"Title: {experience_title}\nEmployer: {experience_employer}\nStart Date: {experience_startdate}\nEnd Date {experience_enddate}\nLocation: {experience_location}"
+                      
         school_name = self.school_name_entry.get()
         degree = self.degree_entry.get()
         years_attended = self.years_attended_entry.get()
