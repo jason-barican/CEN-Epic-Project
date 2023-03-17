@@ -468,7 +468,8 @@ class ApplicationWindow(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
     self.controller = controller    
-
+    
+    
     tk.Label(self, text = "You have successfully logged in!\nPlease select an option.").pack(padx=10, pady=10) 
 
     menu_var = tk.StringVar()
@@ -877,7 +878,7 @@ class AddJobFrame(tk.Frame):
     tk.Frame.__init__(self, parent)
     self.controller = controller
     self.create_widgets()
-
+    
     self.conn = sqlite3.connect('database.db')  	
     self.cursor = self.conn.cursor()
 
@@ -952,6 +953,7 @@ class ProfileFrame(tk.Frame):
         self.controller = controller
         self.conn = sqlite3.connect('database.db')  
         self.cursor = self.conn.cursor()
+
         # create label for title
         self.title_label = Label(self, text="Title:")
         self.title_label.grid(row=0, column=0, padx=10, pady=10)
@@ -979,42 +981,100 @@ class ProfileFrame(tk.Frame):
         # create label for experience
         self.experience_label = Label(self, text="Experience:")
         self.experience_label.grid(row=4, column=0, padx=10, pady=10)
-        # create text box for experience
-        self.experience_text = Text(self, height=5, width=50)
-        self.experience_text.grid(row=4, column=1, padx=10, pady=10)
+
+        #create label for experience title
+        self.experience_title_label = Label(self, text="Title:")
+        self.experience_title_label.grid(row=5, column=0, padx=10, pady=10)
+
+        #create entry for experience title
+        self.experience_title_entry = Entry(self)
+        self.experience_title_entry.grid(row=5, column=1, padx=10, pady=10)
+
+        #create label for experience employer
+        self.experience_employer_label = Label(self, text="Employer:")
+        self.experience_employer_label.grid(row=6, column=0, padx=10, pady=10)
+
+        #create entry for experience employer
+        self.experience_employer_entry = Entry(self)
+        self.experience_employer_entry.grid(row=6, column=1, padx=10, pady=10)
+
+        #create label for experience start date
+        self.experience_startdate_label = Label(self, text="Start Date:")
+        self.experience_startdate_label.grid(row=7, column=0, padx=10, pady=10)
+
+        #create entry for experience start date
+        self.experience_startdate_entry = Entry(self)
+        self.experience_startdate_entry.grid(row=7, column=1, padx=10, pady=10)
+
+        #create label for experience end date
+        self.experience_enddate_label = Label(self, text="End Date:")
+        self.experience_enddate_label.grid(row=8, column=0, padx=10, pady=10)
+
+        #create entry for experience end date
+        self.experience_enddate_entry = Entry(self)
+        self.experience_enddate_entry.grid(row=8, column=1, padx=10, pady=10)
+
+        #create label for experience location
+        self.experience_location_label = Label(self, text="Location:")
+        self.experience_location_label.grid(row=9, column=0, padx=10, pady=10)
+
+        #create entry for experience location
+        self.experience_location_entry = Entry(self)
+        self.experience_location_entry.grid(row=9, column=1, padx=10, pady=10)
+
+        #create label for experience description
+        self.experience_description_label = Label(self, text="Job Description:")
+        self.experience_description_label.grid(row=10, column=1, padx=10, pady=10)
+
+        # create text box entry for experience description
+        self.experience_description_entry = Text(self, height=5, width=50)
+        self.experience_description_entry.grid(row=10, column=1, padx=10, pady=10)
         # create label for education
         self.education_label = Label(self, text="Education:")
-        self.education_label.grid(row=5, column=0, padx=10, pady=10)
+        self.education_label.grid(row=11, column=0, padx=10, pady=10)
         # create label for school name
         self.school_name_label = Label(self, text="School Name:")
-        self.school_name_label.grid(row=6, column=0, padx=10, pady=10)
+        self.school_name_label.grid(row=12, column=0, padx=10, pady=10)
         # create entry for school name
         self.school_name_entry = Entry(self)
-        self.school_name_entry.grid(row=6, column=1, padx=10, pady=10)
+        self.school_name_entry.grid(row=12, column=1, padx=10, pady=10)
         # create label for degree
         self.degree_label = Label(self, text="Degree:")
-        self.degree_label.grid(row=7, column=0, padx=10, pady=10)
+        self.degree_label.grid(row=13, column=0, padx=10, pady=10)
         # create entry for degree
         self.degree_entry = Entry(self)
-        self.degree_entry.grid(row=7, column=1, padx=10, pady=10)
+        self.degree_entry.grid(row=13, column=1, padx=10, pady=10)
         # create label for years attended
         self.years_attended_label = Label(self, text="Years Attended:")
-        self.years_attended_label.grid(row=8, column=0, padx=10, pady=10)
+        self.years_attended_label.grid(row=14, column=0, padx=10, pady=10)
         # create entry for years attended
         self.years_attended_entry = Entry(self)
-        self.years_attended_entry.grid(row=8, column=1, padx=10, pady=10)
+        self.years_attended_entry.grid(row=14, column=1, padx=10, pady=10)
         self.saveButton = tk.Button(self, text="Save", command = self.submit_profile )
-        self.saveButton.grid(row=9,column=1)
+        self.saveButton.grid(row=15,column=1)
         self.backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
-        self.backButton.grid(row=10,column=1)
+        self.backButton.grid(row=16,column=1)
     # function to handle submit button click
     def submit_profile(self):
         # get values from input fields
+        print("hello")
         title = self.title_entry.get()
         major = self.major_entry.get().lower().title()  # convert to title case
         university = self.university_entry.get().lower().title()
         about = self.about_text.get("1.0", END)
-        experience = self.experience_text.get("1.0", END)
+
+        experience_title = self.experience_title_entry.get()
+        experience_employer = self.experience_employer_entry.get()
+        experience_startdate = self.experience_startdate_entry.get()
+        experience_enddate = self.experience_enddate_entry.get()
+        experience_location = self.experience_location_entry.get()
+
+        experience = f"""\nTitle: {experience_title}\n
+                        Employer: {experience_employer}\n
+                        Start Date: {experience_startdate}\n
+                        End Date {experience_enddate}\n
+                        Location: {experience_location}
+                      """
         school_name = self.school_name_entry.get()
         degree = self.degree_entry.get()
         years_attended = self.years_attended_entry.get()
@@ -1032,7 +1092,6 @@ class ProfileFrame(tk.Frame):
         data_insert_tuple = (loginUsername, title, major, university, about, experience, education)
         self.cursor.execute(data_insert_query, data_insert_tuple)
         self.conn.commit()
-        self.conn.close()
         self.controller.show_frame("ApplicationWindow")
         
 
@@ -1124,7 +1183,6 @@ class DisplayProfileFrame(tk.Frame):
 class MainWindow(tk.Tk):
   def __init__(self, *args, **kwargs):
     tk.Tk.__init__(self, *args, **kwargs)
-
     mainframe = tk.Frame()
     self.windowNum = 0
     mainframe.pack(padx = 5, pady = 5,)# fill = 'both', expand = 1)
