@@ -657,8 +657,138 @@ class JobSearchFrame(tk.Frame):
     addJobButton = tk.Button(self, text = "Add Job", command = lambda: controller.show_frame("AddJobFrame"))
     addJobButton.pack(padx = 10, pady = 10)
 
+    removeJobButton = tk.Button(self, text = "Remove Job", command = lambda: controller.show_frame("RemoveJobFrame"))
+    removeJobButton.pack(padx = 10, pady = 10)
+
     backButton = tk.Button(self, text = "Back", command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
+
+class AddJobFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+    self.create_widgets()
+    
+    self.conn = sqlite3.connect('database.db')  	
+    self.cursor = self.conn.cursor()
+
+  def create_widgets(self):
+      self.title_label = tk.Label(self, text="Enter title:")
+      self.title_entry = tk.Entry(self)
+      self.title_label.grid(row=0, column=0, padx=5, pady=5)
+      self.title_entry.grid(row=0, column=1, padx=5, pady=5)
+
+      self.description_label = tk.Label(self, text="Enter description:")
+      self.description_entry = tk.Entry(self)
+      self.description_label.grid(row=1, column=0, padx=5, pady=5)
+      self.description_entry.grid(row=1, column=1, padx=5, pady=5)
+
+      self.employer_label = tk.Label(self, text="Enter employer:")
+      self.employer_entry = tk.Entry(self)
+      self.employer_label.grid(row=2, column=0, padx=5, pady=5)
+      self.employer_entry.grid(row=2, column=1, padx=5, pady=5)
+
+      self.location_label = tk.Label(self, text="Enter location:")
+      self.location_entry = tk.Entry(self)
+      self.location_label.grid(row=3, column=0, padx=5, pady=5)
+      self.location_entry.grid(row=3, column=1, padx=5, pady=5)
+
+      self.salary_label = tk.Label(self, text="Enter salary:")
+      self.salary_entry = tk.Entry(self)
+      self.salary_label.grid(row=4, column=0, padx=5, pady=5)
+      self.salary_entry.grid(row=4, column=1, padx=5, pady=5)
+
+      self.post_button = tk.Button(self, text="Post job", command=self.post_job)
+      self.post_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+
+      self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
+      self.back_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+
+  def post_job(self):
+      global loginUsername	
+      	
+      count = 0	
+      self.cursor.execute('''SELECT * from JOB_DATA''')	
+      jobs = self.cursor.fetchall()	
+      	
+      count += len(jobs)	
+      #checking if amount of accounts has exceeded maximum	
+      if count >= 10:	
+        result_text = "All permitted jobs have been created, please come back later"	
+      else:	
+        title = self.title_entry.get()	
+        description = self.description_entry.get()	
+        employer = self.employer_entry.get()	
+        location = self.location_entry.get()	
+        salary = self.salary_entry.get()	
+        data_insert_query = ('''INSERT INTO JOB_DATA(	
+                            TITLE, DESCRIPTION, EMPLOYER, LOCATION, SALARY) VALUES	
+                            (?, ?, ?, ?, ?)	
+                            ''')	
+        data_insert_tuple = (title, description, employer, location, salary)	
+        	
+        self.cursor.execute(data_insert_query, data_insert_tuple)	
+        self.conn.commit()	
+        	
+        result_text = "New job posted!"
+
+      result_label = tk.Label(self, text=result_text)
+      result_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
+      
+
+class RemoveJobFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+    
+    self.conn = sqlite3.connect('database.db')  	
+    self.cursor = self.conn.cursor()
+
+    self.create_widgets()
+
+  def create_widgets(self):
+    self.cursor.execute('''SELECT TITLE, EMPLOYER from JOB_DATA''')
+    database = self.cursor.fetchall()
+
+    if len(database) == 0:
+      emptyJobList_label= tk.Label(self, text="There are currently no posted jobs.")
+      emptyJobList_label.pack(padx=10, pady=10)
+
+      back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
+      back_button.pack(padx=10, pady=10)
+    
+    else:
+      jobList = []
+      for i in range(0, len(database)):
+        jobList.append(f"{database[i][0]} at {database[i][1]}")
+
+      self.clicked = StringVar()
+      self.clicked.set(jobList[0])
+
+      dropdown_label = tk.Label(self, text="Please select job to delete.")
+      dropdown_label.grid(row=0, column=0, padx=5, pady=5)
+
+      dropdown = OptionMenu(self, self.clicked, *jobList)
+      dropdown.grid(row=1, column=0, padx=5, pady=5)
+      
+      delete_button = tk.Button(self, text="Delete", command=self.delete_job)
+      delete_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+      back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
+      back_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+      
+  def delete_job(self):
+    
+    value = self.clicked.get().split()
+    print(value[0])
+    print(value[2])
+
+    self.cursor.execute(f'DELETE FROM JOB_DATA WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
+    self.conn.commit()
+    
+
+    messagebox.showinfo("Job Deleted", "You have successfully deleted the job.")
+    self.controller.show_frame("JobSearchFrame")
+
 
 
 
@@ -868,83 +998,6 @@ class FriendFrame(tk.Frame):
     # Allow the Canvas widget to automatically adjust its size
     self.frame.update_idletasks()
     self.canvas.config(scrollregion=self.canvas.bbox('all'))
-
-
-
-
-
-class AddJobFrame(tk.Frame):
-  def __init__(self, parent, controller):
-    tk.Frame.__init__(self, parent)
-    self.controller = controller
-    self.create_widgets()
-    
-    self.conn = sqlite3.connect('database.db')  	
-    self.cursor = self.conn.cursor()
-
-  def create_widgets(self):
-      self.title_label = tk.Label(self, text="Enter title:")
-      self.title_entry = tk.Entry(self)
-      self.title_label.grid(row=0, column=0, padx=5, pady=5)
-      self.title_entry.grid(row=0, column=1, padx=5, pady=5)
-
-      self.description_label = tk.Label(self, text="Enter description:")
-      self.description_entry = tk.Entry(self)
-      self.description_label.grid(row=1, column=0, padx=5, pady=5)
-      self.description_entry.grid(row=1, column=1, padx=5, pady=5)
-
-      self.employer_label = tk.Label(self, text="Enter employer:")
-      self.employer_entry = tk.Entry(self)
-      self.employer_label.grid(row=2, column=0, padx=5, pady=5)
-      self.employer_entry.grid(row=2, column=1, padx=5, pady=5)
-
-      self.location_label = tk.Label(self, text="Enter location:")
-      self.location_entry = tk.Entry(self)
-      self.location_label.grid(row=3, column=0, padx=5, pady=5)
-      self.location_entry.grid(row=3, column=1, padx=5, pady=5)
-
-      self.salary_label = tk.Label(self, text="Enter salary:")
-      self.salary_entry = tk.Entry(self)
-      self.salary_label.grid(row=4, column=0, padx=5, pady=5)
-      self.salary_entry.grid(row=4, column=1, padx=5, pady=5)
-
-      self.post_button = tk.Button(self, text="Post job", command=self.post_job)
-      self.post_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
-
-      self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
-      self.back_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
-
-  def post_job(self):
-      global loginUsername	
-      	
-      count = 0	
-      self.cursor.execute('''SELECT * from JOB_DATA''')	
-      jobs = self.cursor.fetchall()	
-      	
-      count += len(jobs)	
-      #checking if amount of accounts has exceeded maximum	
-      if count >= 10:	
-        result_text = "All permitted jobs have been created, please come back later"	
-      else:	
-        title = self.title_entry.get()	
-        description = self.description_entry.get()	
-        employer = self.employer_entry.get()	
-        location = self.location_entry.get()	
-        salary = self.salary_entry.get()	
-        data_insert_query = ('''INSERT INTO JOB_DATA(	
-                            TITLE, DESCRIPTION, EMPLOYER, LOCATION, SALARY) VALUES	
-                            (?, ?, ?, ?, ?)	
-                            ''')	
-        data_insert_tuple = (title, description, employer, location, salary)	
-        	
-        self.cursor.execute(data_insert_query, data_insert_tuple)	
-        self.conn.commit()	
-        	
-        result_text = "New job posted!"
-
-      result_label = tk.Label(self, text=result_text)
-      result_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
-
 
 
 class ProfileFrame(tk.Frame):
@@ -1186,7 +1239,8 @@ class MainWindow(tk.Tk):
 
     for F in (MainMenu, LoginWindow, SignUpWindow,
               VideoWindow, ApplicationWindow, LearnSkillWindow,
-              FindSomeoneFrame, JobSearchFrame, AddJobFrame, DisplayProfileFrame, ProfileFrame, IL.CopyrightNoticeFrame,
+              FindSomeoneFrame, JobSearchFrame, AddJobFrame, RemoveJobFrame,
+              DisplayProfileFrame, ProfileFrame, IL.CopyrightNoticeFrame,
               IL.InCollegeAboutFrame, IL.AccessibilityNoticeFrame, IL.UserAgreementFrame,
               IL.PrivacyPolicyFrame, IL.CookiePolicyFrame, IL.CopyrightPolicyFrame,
               IL.BrandPolicyFrame, GuestControlsFrame, LanguageFrame,
