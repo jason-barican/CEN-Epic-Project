@@ -747,18 +747,15 @@ class RemoveJobFrame(tk.Frame):
     self.conn = sqlite3.connect('database.db')  	
     self.cursor = self.conn.cursor()
 
+    #widget declarations for if jobList is empty
     self.emptyJobList_label= tk.Label(self, text="There are currently no posted jobs.")
     self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
     
 
+    #widget declarations for if jobList isn't empty
     self.dropdown_label = tk.Label(self, text="Please select job to delete.")
 
-    self.jobList = ["temp"]
-    self.clicked = StringVar()
-    self.clicked.set("Select Job")
-    self.dropdown = tk.OptionMenu(self, self.clicked, *self.jobList)
-    self.jobList.remove("temp")
-    
+    self.dropdown = None
 
     self.delete_button = tk.Button(self, text="Delete", command=self.delete_job)
     self.back_button2 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
@@ -770,37 +767,53 @@ class RemoveJobFrame(tk.Frame):
   def on_show_frame(self, event):
     self.cursor.execute('''SELECT TITLE, EMPLOYER from JOB_DATA''')
     database = self.cursor.fetchall()
-    
-    
 
-    if len(database) == 0:
-      #hides widgets in else condition
-      
-      self.dropdown_label.grid_remove()
-      self.dropdown.grid_remove()
-      self.delete_button.grid_remove()
-      self.back_button.grid_remove()
-
-      self.emptyJobList_label.grid(row=0, column=0, padx=5, pady=5)
-      self.back_button.grid(row=1, column=0, padx=10, pady=10)
-      
-        
-    
-    else:
-      #hides widgets in if condition
+    try:
       
       self.emptyJobList_label.grid_remove()
       self.back_button.grid_remove()
-          
-      self.dropdown_label.grid(row=0, column=0, padx=5, pady=5)
-      self.dropdown.grid(row=1, column=0, padx=5, pady=5)
-      
-      for i in range(0, len(database)):
-        self.jobList.append(f"{database[i][0]} at {database[i][1]}")
-      
+      self.dropdown_label.grid_remove()
+      self.dropdown.grid_remove()
+      self.delete_button.grid_remove()
+      self.back_button2.grid_remove()
+    
+    finally:
 
-      self.delete_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-      self.back_button2.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+      if len(database) == 0:
+        #hides widgets in else condition
+        try:
+          self.dropdown_label.grid_remove()
+          self.dropdown.grid_remove()
+          self.delete_button.grid_remove()
+          self.back_button2.grid_remove()
+        finally:
+          self.emptyJobList_label.grid(row=0, column=0, padx=5, pady=5)
+          self.back_button.grid(row=1, column=0, padx=10, pady=10)
+        
+          
+      
+      else:
+        #hides widgets in if condition
+        
+        self.emptyJobList_label.grid_remove()
+        self.back_button.grid_remove()
+            
+
+        self.dropdown_label.grid(row=0, column=0, padx=5, pady=5)
+
+        jobList = []
+        
+        for i in range(0, len(database)):
+          jobList.append(f"{database[i][0]} at {database[i][1]}")
+
+        self.clicked = StringVar()
+        self.clicked.set("Select Job")
+
+        self.dropdown = tk.OptionMenu(self, self.clicked, *jobList)
+        self.dropdown.grid(row=1, column=0, padx=5, pady=5)
+
+        self.delete_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+        self.back_button2.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
       
         
