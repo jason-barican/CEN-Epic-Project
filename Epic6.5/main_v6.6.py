@@ -735,6 +735,13 @@ class AddJobFrame(tk.Frame):
         	
         result_text = "New job posted!"
 
+        #clears values in entry
+        self.title_entry.delete(0, END)
+        self.description_entry.delete(0, END)
+        self.employer_entry.delete(0, END)
+        self.location_entry.delete(0, END)
+        self.salary_entry.delete(0, END)
+
       result_label = tk.Label(self, text=result_text)
       result_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
       
@@ -769,7 +776,7 @@ class RemoveJobFrame(tk.Frame):
     database = self.cursor.fetchall()
 
     try:
-      
+
       self.emptyJobList_label.grid_remove()
       self.back_button.grid_remove()
       self.dropdown_label.grid_remove()
