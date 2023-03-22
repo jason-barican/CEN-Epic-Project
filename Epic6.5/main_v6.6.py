@@ -660,6 +660,12 @@ class JobSearchFrame(tk.Frame):
     viewApplicationsButton = tk.Button(self, text = "Your Job Applications", command = lambda: controller.show_frame("ViewJobApplicationFrame"))
     viewApplicationsButton.pack(padx = 10, pady = 10)
 
+    viewNotAppliedButton = tk.Button(self, text = "Unapplied Jobs", command = lambda: controller.show_frame("ViewJobNotAppliedFrame"))
+    viewNotAppliedButton.pack(padx = 10, pady = 10)
+
+    savedJobsButton = tk.Button(self, text = "Saved Jobs", command = lambda: controller.show_frame("ViewSavedJobsFrame"))
+    savedJobsButton.pack(padx = 10, pady = 10)
+
     addJobButton = tk.Button(self, text = "Add Job", command = lambda: controller.show_frame("AddJobFrame"))
     addJobButton.pack(padx = 10, pady = 10)
 
@@ -789,6 +795,7 @@ class RemoveJobFrame(tk.Frame):
       self.dropdown.grid_remove()
       self.delete_button.grid_remove()
       self.back_button2.grid_remove()
+      self.save_button.grid_remove()
 
     except AttributeError:
           pass
@@ -842,6 +849,9 @@ class RemoveJobFrame(tk.Frame):
 
     self.cursor.execute(f'DELETE FROM JOB_DATA WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
     self.conn.commit()
+
+    self.cursor.execute(f'DELETE FROM APPLICATIONS WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
+    self.conn.commit()
     
 
     messagebox.showinfo("Job Deleted", "You have successfully deleted the job.")
@@ -869,16 +879,24 @@ class JobApplicationFrame(tk.Frame):
     #widget declarations for 'display_job' function
     
     self.apply_button = tk.Button(self, text="Apply for Job", command=self.application_info)
+    self.save_button = tk.Button(self, text="Save Job", command=self.save_job)
     self.back_button3 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobApplicationFrame"))
 
     self.bind("<<ShowFrame>>", self.on_show_frame)
 
   def on_show_frame(self, event):
-
     self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
-    self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM JOB_DATA WHERE POSTED_BY != {self.user_id}")
+    self.job_id = self.cursor.execute(f'SELECT JOB_ID FROM APPLICATIONS WHERE USER_ID = "{self.user_id}"').fetchall()
 
+    if self.job_id: #if list has data
+      self.cursor.execute(f"SELECT * FROM JOB_DATA jd LEFT JOIN APPLICATIONS a ON jd.JOB_ID = a.JOB_ID AND a.USER_ID ={self.user_id} WHERE POSTED_BY != {self.user_id} AND a.JOB_ID IS NULL AND a.USER_ID IS NULL")
+    else: #if job_id list is empty
+      self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM JOB_DATA WHERE POSTED_BY != {self.user_id}")
+    
     database = self.cursor.fetchall()
+    
+    print(database)
+
     try:
       self.job_title.grid_remove()
       self.job_description.grid_remove()
@@ -910,6 +928,7 @@ class JobApplicationFrame(tk.Frame):
       self.why_label.grid_remove()
       self.why_entry.grid_remove()
       self.apply_button.grid_remove()
+      self.save_button.grid_remove()
       self.back_button.grid_remove()
     finally:
       if len(database) == 0:
@@ -996,8 +1015,10 @@ class JobApplicationFrame(tk.Frame):
       self.job_salary.grid(row=4, column=0, padx=5, pady=5)
       
       self.apply_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+
+      self.save_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
       
-      self.back_button3.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+      self.back_button3.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
 
   
   def application_info(self):
@@ -1037,6 +1058,23 @@ class JobApplicationFrame(tk.Frame):
     self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
     self.back_button.grid(row=5, column=2, padx=5, pady=5)
 
+  def save_job(self):
+      global loginUsername
+
+      user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
+
+      job_id = self.job[0][0]
+      job_title = self.job[0][1]
+      job_employer = self.job[0][3]
+      job_description = self.job[0][2]
+
+      self.cursor.execute(f'INSERT OR IGNORE INTO SAVED_JOBS (JOB_ID, USER_ID, TITLE, EMPLOYER, DESCRIPTION) VALUES (?,?,?,?,?)',
+                          (job_id, user_id, job_title, job_employer, job_description))
+      self.conn.commit()
+
+      messagebox.showinfo("Job Saved", "Job successfully saved.")
+      self.controller.show_frame("JobSearchFrame")
+
   def apply_job(self):
       # Retrieve the job details
       global loginUsername
@@ -1052,7 +1090,7 @@ class JobApplicationFrame(tk.Frame):
       why = self.why_entry.get(1.0, "end-1c")
 
       # Insert the application data into the database
-      self.cursor.execute('INSERT OR IGNORE INTO APPLICATIONS (JOB_ID, USER_ID, TITLE, EMPLOYER, DESCRIPTION, GRADUATION_DATE, START_DATE, WHY) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      self.cursor.execute('INSERT OR IGNORE INTO APPLICATIONS (JOB_ID, USER_ID, TITLE, EMPLOYER, DESCRIPTION, GRADUATION_DATE, START_DATE, WHY) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                             (job_id, user_id, job_title, job_employer, job_description, graduation_date, start_date, why))
       self.conn.commit()
 
@@ -1136,6 +1174,145 @@ class ViewJobApplicationFrame(tk.Frame):
 
         self.back_button2.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
+class ViewJobNotAppliedFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+
+    self.conn = sqlite3.connect('database.db')  	
+    self.cursor = self.conn.cursor()
+    
+    #widget declarations for if job applications is empty
+    self.emptyJobList_label= tk.Label(self, text="You currently have no unapplied jobs.")
+    self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
+
+    #widget declarations for if job applications isn't empty
+    self.dropdown_label = tk.Label(self, text="Jobs You Haven't Applied for:")
+    self.dropdown = None
+
+    self.back_button2 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
+
+    self.bind("<<ShowFrame>>", self.on_show_frame)
+
+  def on_show_frame(self, event):
+
+    self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
+    self.app_user_id = self.cursor.execute("SELECT USER_ID FROM APPLICATIONS").fetchall()
+    self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM JOB_DATA WHERE JOB_ID NOT IN (SELECT JOB_ID FROM APPLICATIONS)")
+
+    database = self.cursor.fetchall()
+
+    try:
+      self.emptyJobList_label.grid_remove()
+      self.back_button.grid_remove()
+      self.dropdown_label.grid_remove()
+      self.dropdown.grid_remove()
+      
+      self.back_button2.grid_remove()
+    except AttributeError:
+      pass
+    finally:
+      if len(database) == 0:
+        #hides widgets in else condition
+        try:
+          self.dropdown_label.grid_remove()
+          self.dropdown.grid_remove()
+          self.back_button2.grid_remove()
+        except AttributeError:
+          pass
+        finally:
+          self.emptyJobList_label.grid(row=0, column=0, padx=5, pady=5)
+          self.back_button.grid(row=1, column=0, padx=10, pady=10)
+
+      else:
+        #hides widgets in if condition
+        self.emptyJobList_label.grid_remove()
+        self.back_button.grid_remove()
+
+        self.dropdown_label.grid(row=0, column=0, padx=5, pady=5)
+        jobAppList = []
+
+        for i in range(0, len(database)):
+          
+          jobAppList.append(f"{database[i][0]} at {database[i][1]}")
+
+        self.clicked = StringVar()
+        self.clicked.set(jobAppList[0])
+
+        self.dropdown = OptionMenu(self, self.clicked, *jobAppList)
+        self.dropdown.grid(row=1, column=0, padx=5, pady=5)
+
+        self.back_button2.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+class ViewSavedJobsFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+
+    self.conn = sqlite3.connect('database.db')  	
+    self.cursor = self.conn.cursor()
+    
+    #widget declarations for if job applications is empty
+    self.emptyJobList_label= tk.Label(self, text="You currently have no saved job applications.")
+    self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
+
+    #widget declarations for if job applications isn't empty
+    self.dropdown_label = tk.Label(self, text="Your Saved Jobs:")
+    self.dropdown = None
+
+    self.back_button2 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
+
+    self.bind("<<ShowFrame>>", self.on_show_frame)
+
+  def on_show_frame(self, event):
+
+    self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
+    self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM SAVED_JOBS WHERE USER_ID = {self.user_id}")
+
+    database = self.cursor.fetchall()
+
+    try:
+      self.emptyJobList_label.grid_remove()
+      self.back_button.grid_remove()
+      self.dropdown_label.grid_remove()
+      self.dropdown.grid_remove()
+      
+      self.back_button2.grid_remove()
+    except AttributeError:
+      pass
+    finally:
+      if len(database) == 0:
+        #hides widgets in else condition
+        try:
+          self.dropdown_label.grid_remove()
+          self.dropdown.grid_remove()
+          self.back_button2.grid_remove()
+        except AttributeError:
+          pass
+        finally:
+          self.emptyJobList_label.grid(row=0, column=0, padx=5, pady=5)
+          self.back_button.grid(row=1, column=0, padx=10, pady=10)
+
+      else:
+        #hides widgets in if condition
+        self.emptyJobList_label.grid_remove()
+        self.back_button.grid_remove()
+
+        self.dropdown_label.grid(row=0, column=0, padx=5, pady=5)
+        jobAppList = []
+
+        for i in range(0, len(database)):
+          
+          jobAppList.append(f"{database[i][0]} at {database[i][1]}")
+
+        self.clicked = StringVar()
+        self.clicked.set(jobAppList[0])
+
+        self.dropdown = OptionMenu(self, self.clicked, *jobAppList)
+        self.dropdown.grid(row=1, column=0, padx=5, pady=5)
+
+        self.back_button2.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+        
 class FriendFrame(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
@@ -1585,7 +1762,7 @@ class MainWindow(tk.Tk):
               VideoWindow, ApplicationWindow, LearnSkillWindow,
               FindSomeoneFrame, JobSearchFrame, AddJobFrame, RemoveJobFrame,
               JobApplicationFrame, DisplayProfileFrame, ViewJobApplicationFrame, 
-              ProfileFrame, IL.CopyrightNoticeFrame,
+              ViewJobNotAppliedFrame, ViewSavedJobsFrame, ProfileFrame, IL.CopyrightNoticeFrame,
               IL.InCollegeAboutFrame, IL.AccessibilityNoticeFrame, IL.UserAgreementFrame,
               IL.PrivacyPolicyFrame, IL.CookiePolicyFrame, IL.CopyrightPolicyFrame,
               IL.BrandPolicyFrame, GuestControlsFrame, LanguageFrame,
@@ -1687,11 +1864,13 @@ class MainWindow(tk.Tk):
     database.execute(job_applications)
 
     saved_jobs = '''CREATE TABLE IF NOT EXISTS SAVED_JOBS(
+                      JOB_ID INT, 
                       USER_ID INT,
                       TITLE TEXT, 
                       EMPLOYER TEXT, 
                       DESCRIPTION TEXT, 
-                      PRIMARY KEY (USER_ID, TITLE),
+                      PRIMARY KEY (USER_ID, JOB_ID),
+                      FOREIGN KEY (JOB_ID) REFERENCES JOB_DATA(JOB_ID),
                       FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID),
                       FOREIGN KEY(TITLE) REFERENCES JOB_DATA (TITLE),
                       FOREIGN KEY(EMPLOYER) REFERENCES JOB_DATA (EMPLOYER),
