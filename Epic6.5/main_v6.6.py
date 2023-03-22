@@ -795,7 +795,7 @@ class RemoveJobFrame(tk.Frame):
       self.dropdown.grid_remove()
       self.delete_button.grid_remove()
       self.back_button2.grid_remove()
-      self.save_button.grid_remove()
+      
 
     except AttributeError:
           pass
@@ -852,6 +852,9 @@ class RemoveJobFrame(tk.Frame):
 
     self.cursor.execute(f'DELETE FROM APPLICATIONS WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
     self.conn.commit()
+
+    self.cursor.execute(f'DELETE FROM SAVED_JOBS WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
+    self.conn.commit()
     
 
     messagebox.showinfo("Job Deleted", "You have successfully deleted the job.")
@@ -895,7 +898,7 @@ class JobApplicationFrame(tk.Frame):
     
     database = self.cursor.fetchall()
     
-    print(database)
+    
 
     try:
       self.job_title.grid_remove()
@@ -917,6 +920,7 @@ class JobApplicationFrame(tk.Frame):
       pass
     try:
       self.apply_button.grid_remove()
+      self.save_button.grid_remove()
       self.back_button3.grid_remove()
     except AttributeError:
        pass
@@ -928,7 +932,7 @@ class JobApplicationFrame(tk.Frame):
       self.why_label.grid_remove()
       self.why_entry.grid_remove()
       self.apply_button.grid_remove()
-      self.save_button.grid_remove()
+      
       self.back_button.grid_remove()
     finally:
       if len(database) == 0:
@@ -995,7 +999,7 @@ class JobApplicationFrame(tk.Frame):
       value = self.clicked.get().split()
       self.cursor.execute(f'SELECT * FROM JOB_DATA WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
       self.job = self.cursor.fetchall()
-      print(self.job[0][0])
+      
 
       self.job_id = tk.Label(self, text=f"{self.job[0][0]}")
       self.job_title = tk.Label(self, text=f"{self.job[0][1]}")
