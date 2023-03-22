@@ -1322,18 +1322,19 @@ class FriendFrame(tk.Frame):
     tk.Frame.__init__(self, parent)
     self.controller = controller
     self.bind("<<ShowFrame>>", self.on_show_frame)
+    # Create Scrollbar widget and Canvas widget
+    scrollbar = tk.Scrollbar(self)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    self.canvas = tk.Canvas(self, yscrollcommand=scrollbar.set)
+    self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.config(command=self.canvas.yview)
+    # Create a Frame widget to contain all the elements and buttons
+    self.frame = tk.Frame(self.canvas)
+    self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
   
   def on_show_frame(self, event):
       global loginUsername
-      # Create Scrollbar widget and Canvas widget
-      scrollbar = tk.Scrollbar(self)
-      scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-      self.canvas = tk.Canvas(self, yscrollcommand=scrollbar.set)
-      self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-      scrollbar.config(command=self.canvas.yview)
-      # Create a Frame widget to contain all the elements and buttons
-      self.frame = tk.Frame(self.canvas)
-      self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
+
       # Add the Pending Requests LabelFrame
       if not hasattr(self, 'pending_frame'):
         self.pending_frame = tk.LabelFrame(self.frame, text="Pending Requests")
@@ -1416,23 +1417,29 @@ class FriendFrame(tk.Frame):
       for widget in self.search_frame.winfo_children():
           widget.destroy()
 
+      self.add_search_elements(self.search_frame)
+
       # Execute the search query
       cursor = self.conn.execute(f"SELECT u.USERNAME, u.FIRSTNAME, u.LASTNAME, p.University, p.Major FROM USER_DATA u JOIN PROFILE_DATA p ON u.USERNAME = p.USERNAME WHERE (u.LASTNAME LIKE '%{query}%' OR p.University LIKE '%{query}%' OR p.Major LIKE '%{query}%')")
       self.results = cursor.fetchall()
 
       if not self.results:
           label = tk.Label(self.search_frame, text="No results found", width=50)
-          label.grid(row=0, column=0, padx=5, pady=5)
+          label.grid(row=len(self.results)+1, column=1, padx=5, pady=5)
+
       else:
           # Add elements and buttons to the Frame widget
           for i, element in enumerate(self.results):
-              label = tk.Label(self.search_frame, text=f"{element[1]} {element[2]} {element[3]} {element[4]}",width=50)
-              label.grid(row=i, column=0, padx=5, pady=5)
-              button = tk.Button(self.search_frame, text='add', command=lambda element=element: self.add_friend(element))
-              button.grid(row=i, column=1, padx=5, pady=5)
+              if loginUsername != element[0]:
+                label = tk.Label(self.search_frame, text=f"{element[1]} {element[2]} {element[3]} {element[4]}",width=50)
+                label.grid(row=len(self.results)+2+i, column=0, padx=5, pady=5)
+                button = tk.Button(self.search_frame, text='Add', command=lambda element=element: self.add_friend(element))
+                button.grid(row=len(self.results)+2+i, column=1, padx=5, pady=5)
+          cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE USERNAME = '{element[0]}'")
+          self.pendingId = cursor.fetchone()[0]
 
-      backButton = tk.Button(self.search_frame, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
-      backButton.grid(row=len(self.results)+1, column=0, padx=5, pady=5)
+      #backButton = tk.Button(self.search_frame, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
+      #backButton.grid(row=len(self.results)+1, column=0, padx=5, pady=5)
 
   def add_friends_elements(self, frame):
     # Clear the Frame widget before adding elements
@@ -1473,13 +1480,15 @@ class FriendFrame(tk.Frame):
     self.update_frame()
 
   def add_friend(self, element):
-    self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({self.userid}, '{element[1]}', '{element[2]}')")
-    self.conn.commit() 
-    cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = '{element[1]}' AND LASTNAME = '{element[2]}'")
-    search_userid = cursor.fetchone()[0]
-    self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({search_userid}, '{self.myfirst}', '{self.mylast}')")
-    self.conn.commit()
-    self.update_frame()
+      # Check if the friend request already exists
+      cursor = self.conn.execute("SELECT * FROM PENDING WHERE USER_ID = ? AND PENDING_FIRST = ? AND PENDING_LAST = ?",
+                                (self.pendingId, self.myfirst, self.mylast))
+      if not cursor.fetchone():
+          # Friend request doesn't exist, add it
+          self.conn.execute("INSERT INTO PENDING (USER_ID, PENDING_FIRST, PENDING_LAST) VALUES (?, ?, ?)",
+                        (self.pendingId, self.myfirst, self.mylast))
+          self.conn.commit()
+          self.update_frame()
 
   #remove user from friends table
   def disconnect_element(self, element):
