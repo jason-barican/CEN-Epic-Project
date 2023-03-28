@@ -525,6 +525,9 @@ class ApplicationWindow(tk.Frame):
     FriendButton = tk.Button(self, text = "Show my network", command = lambda: controller.show_frame("FriendFrame"))
     FriendButton.pack(padx = 10, pady = 10)
 
+    messagingButton = tk.Button(self, text = "Messaging", command = lambda: controller.show_frame("MessageFrame"))
+    messagingButton.pack(padx = 10, pady = 10)
+
     exitButton = tk.Button(self, text = "Exit", command = self.quit)
     exitButton.pack(padx = 10, pady = 10)
 
@@ -1542,6 +1545,124 @@ class FriendFrame(tk.Frame):
         self.frame.update_idletasks()
         self.canvas.config(scrollregion=self.canvas.bbox('all'))
 
+class MessageFrame(tk.Frame):
+  def __init__(self, parent, controller):
+    tk.Frame.__init__(self, parent)
+    self.controller = controller
+
+    self.bind("<<ShowFrame>>", self.on_show_frame)
+    
+    #widgets for initial screen in MessageFrame
+    self.selectOptionLabel = tk.Label(self, text="Please select an option below:")
+    self.sendMessageButton = tk.Button(self, text="Send Message", command=self.select_user)
+    self.inboxButton = tk.Button(self, text="Inbox", command=self.inbox)
+    self.backButton = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
+
+    #widgets for inbox function in message frame
+    self.noMessagesLabel = tk.Label(self, text="You currently have no messages.")
+    self.backButton2 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
+
+    
+
+  def on_show_frame(self, event):
+    global loginUsername
+
+    self.conn = sqlite3.connect('database.db')  
+    self.cursor = self.conn.cursor() 
+
+    self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
+    self.messages = self.conn.execute(f"SELECT * FROM MESSAGES WHERE RECEIVER = {self.user_id}").fetchall()
+    self.friends = self.cursor.execute(f"SELECT * FROM FRIENDS WHERE USER_ID = {self.user_id}").fetchall()
+    self.usersList = self.cursor.execute(f"SELECT * FROM USER_DATA WHERE USER_ID != {self.user_id}").fetchall()
+    self.names = self.cursor.execute(f"SELECT FIRSTNAME, LASTNAME FROM USER_DATA WHERE USER_ID != {self.user_id}").fetchall()
+
+    self.selectOptionLabel.grid(padx=5, pady=5)
+    self.sendMessageButton.grid(padx=5, pady=5)
+    self.inboxButton.grid(padx=5, pady=5)
+    self.backButton.grid(padx=5, pady=5)
+
+    self.remove_widgets2()
+
+  
+
+  def select_user(self):
+    self.remove_widgets()
+
+    self.selectFriendLabel = tk.Label(self, text="Please select user to send a message to.")
+    self.selectFriendLabel.grid(padx=5, pady=5)
+
+    self.clicked = StringVar()
+    self.clicked.set(self.names[0])
+    self.dropdown = tk.OptionMenu(self, self.clicked, *self.names)
+    self.dropdown.grid(padx=5, pady=5)
+
+    self.selectButton = tk.Button(self, text="Send A Message", command= self.send_message)
+    self.selectButton.grid(padx=5, pady=5)
+
+
+    self.backButton4 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
+    self.backButton4.grid(padx=5, pady=5)
+
+  def send_message(self):
+    print("hello")
+
+  def inbox(self):
+    self.remove_widgets()
+
+    if len(self.messages) == 0:
+      self.noMessagesLabel.grid(padx=5, pady=5)
+      self.backButton2.grid(padx=5, pady=5)
+
+    else:
+      self.clicked = StringVar()
+      
+      self.dropdown = tk.OptionMenu(self, self.messages[0], *self.messages)
+      self.dropdown.grid(padx=5, pady=5)
+
+      self.backButton3 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
+      self.backButton3.grid(padx=5, pady=5)
+
+  def remove_widgets(self):
+    try:
+      self.selectOptionLabel.grid_remove()
+      self.sendMessageButton.grid_remove()
+      self.inboxButton.grid_remove()
+      self.backButton.grid_remove()
+    except AttributeError:
+      pass
+      
+
+  def remove_widgets2(self):
+    try:
+      self.noMessagesLabel.grid_remove()
+      self.backButton2.grid_remove()
+    except AttributeError:
+      pass
+    try:
+      self.dropdown.grid_remove()
+      self.backButton3.grid_remove()
+    except AttributeError:
+      pass
+    try:
+      self.selectFriendLabel.grid_remove()
+      self.dropdown.grid_remove()
+      self.selectButton.grid_remove()
+      self.backButton4.grid_remove()
+    except AttributeError:
+      pass
+      
+      
+    
+     
+      
+      
+    
+        
+
+
+
+     
+
 class ProfileFrame(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -1788,7 +1909,7 @@ class MainWindow(tk.Tk):
               IL.PrivacyPolicyFrame, IL.CookiePolicyFrame, IL.CopyrightPolicyFrame,
               IL.BrandPolicyFrame, GuestControlsFrame, LanguageFrame,
               GeneralWindow, UL.HelpCenterFrame, UL.AboutFrame, 
-              UL.PressFrame, UnderConstruction, FriendFrame):
+              UL.PressFrame, UnderConstruction, FriendFrame, MessageFrame):
 
       frame_name = F.__name__
       frame = F(parent = mainframe, controller = self)
@@ -1856,6 +1977,16 @@ class MainWindow(tk.Tk):
     )'''
 
     database.execute(friends_query)
+    
+    messaging_query = '''CREATE TABLE IF NOT EXISTS MESSAGES(
+                      SENDER INT,
+                      RECEIVER INT,
+                      MESSAGE TEXT,
+                      TIMESTAMP TEXT
+    )'''
+
+    database.execute(messaging_query)
+    
 
 
 
@@ -1863,8 +1994,6 @@ class MainWindow(tk.Tk):
                     USER_ID INT,
                     PENDING_FIRST TEXT,
                     PENDING_LAST TEXT,
-                    PENDING_USER TEXT,
-                    FOREIGN KEY(PENDING_USER) REFERENCES PROFILE_DATA(USERNAME),
                     FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
     )'''
 
