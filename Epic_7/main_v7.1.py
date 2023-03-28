@@ -1353,7 +1353,6 @@ class FriendFrame(tk.Frame):
   
     def on_show_frame(self, event):
         global loginUsername
-
         # Add the Pending Requests LabelFrame
         if not hasattr(self, 'pending_frame'):
             self.pending_frame = tk.LabelFrame(self.frame, text="Pending Requests")
@@ -1365,20 +1364,17 @@ class FriendFrame(tk.Frame):
         self.myfirst = self.conn.execute(f"SELECT FIRSTNAME FROM USER_DATA WHERE USER_ID = {userid}").fetchone()[0]
         self.mylast = self.conn.execute(f"SELECT LASTNAME FROM USER_DATA WHERE USER_ID = {userid}").fetchone()[0]
         # Display the elements and buttons in the Pending Requests LabelFrame
-        
-        cursor = self.conn.execute(f"SELECT PENDING_FIRST, PENDING_LAST FROM PENDING WHERE USER_ID = '{userid}'")
+        cursor = self.conn.execute(f"SELECT F.PENDING_FIRST, F.PENDING_LAST, F.PENDING_USER, P.University, P.Major FROM PENDING F LEFT JOIN PROFILE_DATA P ON F.PENDING_USER = P.USERNAME WHERE F.USER_ID = '{self.userid}'")
         self.pendingUsers = cursor.fetchall()
         self.add_pending_elements(self.pending_frame)
-
         # Add the Friends LabelFrame
         if not hasattr(self, 'friends_frame'):
             self.friends_frame = tk.LabelFrame(self.frame, text="Friends")
             self.friends_frame.pack(pady=10)
         # Display the elements and buttons in the Friends LabelFrame
-        cursor = self.conn.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = '{userid}'")
+        cursor = self.conn.execute(f"SELECT F.FRIEND_FIRST, F.FRIEND_LAST, P.University, P.Major FROM FRIENDS F LEFT JOIN PROFILE_DATA P ON F.FRIEND_USER = P.USERNAME WHERE F.USER_ID = '{self.userid}'")
         self.friendUsers = cursor.fetchall()
         self.add_friends_elements(self.friends_frame)
-
         if not hasattr(self, 'search_frame'):
             self.search_frame = tk.LabelFrame(self.frame, text="Search a friend by last name, university, or major")
             self.search_frame.pack(pady=10)
@@ -1386,7 +1382,6 @@ class FriendFrame(tk.Frame):
         cursor = self.conn.execute(f"SELECT FIRSTNAME, LASTNAME FROM USER_DATA WHERE USER_ID = '{userid}'")
         self.results = cursor.fetchall()
         self.add_search_elements(self.search_frame)
-
         # Allow the Canvas widget to automatically adjust its size
         self.frame.update_idletasks()
         self.canvas.config(scrollregion=self.canvas.bbox('all'))
@@ -1395,7 +1390,6 @@ class FriendFrame(tk.Frame):
         # Clear the Frame widget before adding elements
         for widget in frame.winfo_children():
             widget.destroy()
-
         if not self.pendingUsers:
             label = tk.Label(frame, text="No new pending requests", width=50)
             label.grid(row=0, column=0, padx=5, pady=5)
@@ -1413,17 +1407,14 @@ class FriendFrame(tk.Frame):
         # Clear the Frame widget before adding elements
         for widget in frame.winfo_children():
             widget.destroy()
-
         # Create and add the search label and text box widgets
         search_label = tk.Label(frame, text="")
         search_label.grid(row=0, column=0, padx=5, pady=5)
         self.search_textbox = tk.Entry(frame, width=50)
         self.search_textbox.grid(row=0, column=1, padx=5, pady=5)
-
         # Create and add the search button widget
         search_button = tk.Button(frame, text="Search", command=self.search)
         search_button.grid(row=0, column=2, padx=5, pady=5)
-
         # Add back button
         backButton = tk.Button(frame, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
         backButton.grid(row=len(self.results)+1, column=0, padx=5, pady=5)
@@ -1431,16 +1422,13 @@ class FriendFrame(tk.Frame):
     def search(self):
         # Get the search query from the text box
         query = self.search_textbox.get()
-
         # Clear the Frame widget before adding elements
         for widget in self.search_frame.winfo_children():
             #if widget != self.search_textbox:
             widget.destroy()
-
         # Execute the search query
         cursor = self.conn.execute(f"SELECT u.USERNAME, u.FIRSTNAME, u.LASTNAME, p.University, p.Major FROM USER_DATA u LEFT JOIN PROFILE_DATA p ON u.USERNAME = p.USERNAME WHERE (u.LASTNAME LIKE '%{query}%' OR p.University LIKE '%{query}%' OR p.Major LIKE '%{query}%')")
         self.results = cursor.fetchall()
-
         if not self.results:
             label = tk.Label(self.search_frame, text="No results found", width=50)
             label.grid(row=0, column=0, padx=5, pady=5)
@@ -1460,7 +1448,6 @@ class FriendFrame(tk.Frame):
                     button.grid(row=i, column=1, padx=5, pady=5)
             cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE USERNAME = '{element[0]}'")
             self.pendingId = cursor.fetchone()[0]
-
         backButton = tk.Button(self.search_frame, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
         backButton.grid(row=len(self.results)+1, column=0, padx=5, pady=5)
 
@@ -1468,17 +1455,17 @@ class FriendFrame(tk.Frame):
         # Clear the Frame widget before adding elements
         for widget in frame.winfo_children():
             widget.destroy()
-
-        cursor = self.conn.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = '{self.userid}'")
+        cursor = self.conn.execute(f"SELECT F.FRIEND_FIRST, F.FRIEND_LAST, P.University, P.Major FROM FRIENDS F LEFT JOIN PROFILE_DATA P ON F.FRIEND_USER = P.USERNAME WHERE F.USER_ID = '{self.userid}'")
         self.friendUsers = cursor.fetchall()
-
         if not self.friendUsers:
             label = tk.Label(frame, text="Don't have any friends yet", width=50)
             label.grid(row=0, column=0, padx=5, pady=5)
         else:
             # Add elements and buttons to the Frame widget
             for i, element in enumerate(self.friendUsers):
-                label = tk.Label(frame, text=element, width=50)
+                university = element[2] if element[2] is not None else ""
+                major = element[3] if element[3] is not None else ""
+                label = tk.Label(frame, text=f"{element[0]} {element[1]} {university} {major}", width=50)
                 label.grid(row=i, column=0, padx=5, pady=5)
                 button1 = tk.Button(frame, text='disconnect', command=lambda element=element: self.disconnect_element(element))
                 button1.grid(row=i, column=1, padx=5, pady=5)
@@ -1491,14 +1478,14 @@ class FriendFrame(tk.Frame):
         self.update_frame()
         #move user to friends table
     def move_element(self, element):
-        self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({self.userid}, '{element[0]}', '{element[1]}')")
+        self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST,FRIEND_USER) VALUES ({self.userid}, '{element[0]}', '{element[1]}','{element[2]}')")
         self.conn.execute(f"DELETE FROM PENDING WHERE USER_ID = {self.userid} AND PENDING_FIRST = '{element[0]}' AND PENDING_LAST = '{element[1]}'")
         self.conn.commit()   
         self.pendingUsers.remove(element)
         self.friendUsers.append((element[0], element[1]))
         cursor = self.conn.execute(f"SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = '{element[0]}' AND LASTNAME = '{element[1]}'")
         friend_userid = cursor.fetchone()[0]
-        self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST) VALUES ({friend_userid}, '{self.myfirst}', '{self.mylast}')")
+        self.conn.execute(f"INSERT INTO FRIENDS (USER_ID, FRIEND_FIRST, FRIEND_LAST, FRIEND_USER) VALUES ({friend_userid}, '{self.myfirst}', '{self.mylast}','{loginUsername}')")
         self.conn.commit()
         self.update_frame()
 
@@ -1508,8 +1495,8 @@ class FriendFrame(tk.Frame):
                                 (self.pendingId, self.myfirst, self.mylast))
         if not cursor.fetchone():
             # Friend request doesn't exist, add it
-            self.conn.execute("INSERT INTO PENDING (USER_ID, PENDING_FIRST, PENDING_LAST) VALUES (?, ?, ?)",
-                            (self.pendingId, self.myfirst, self.mylast))
+            self.conn.execute("INSERT INTO PENDING (USER_ID, PENDING_FIRST, PENDING_LAST, PENDING_USER) VALUES (?, ?, ?, ?)",
+                            (self.pendingId, self.myfirst, self.mylast, loginUsername))
             self.conn.commit()
             self.update_frame()
         else:
@@ -1540,25 +1527,20 @@ class FriendFrame(tk.Frame):
         # Clear the Frame widget before adding elements
         for widget in self.frame.winfo_children():
             widget.destroy()
-
         # Add pending requests label frame and elements
         pendingFrame = tk.LabelFrame(self.frame, text="Pending Requests")
         pendingFrame.pack(side=tk.TOP, fill=tk.BOTH, padx=5, pady=5, expand=True)
         self.add_pending_elements(pendingFrame)
-
         # Add friends label frame and elements
         friendsFrame = tk.LabelFrame(self.frame, text="Friends")
         friendsFrame.pack(side=tk.TOP, fill=tk.BOTH, padx=5, pady=5, expand=True)
         self.add_friends_elements(friendsFrame)
-
         searchFrame = tk.LabelFrame(self.frame, text="search a friend by last name, university, or major")
         searchFrame.pack(side=tk.TOP, fill=tk.BOTH, padx=5, pady=5, expand=True)
         self.add_friends_elements(searchFrame)
-
         # Allow the Canvas widget to automatically adjust its size
         self.frame.update_idletasks()
         self.canvas.config(scrollregion=self.canvas.bbox('all'))
-
 
 class ProfileFrame(tk.Frame):
     def __init__(self, parent, controller):
@@ -1868,8 +1850,9 @@ class MainWindow(tk.Tk):
                     USER_ID INT,
                     FRIEND_FIRST TEXT,
                     FRIEND_LAST TEXT,
-                    PRIMARY KEY (USER_ID),
-                    FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
+                    FRIEND_USER TEXT,
+                    FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID),
+                    FOREIGN KEY (FRIEND_USER) REFERENCES PROFILE_DATA(USERNAME)
     )'''
 
     database.execute(friends_query)
@@ -1880,6 +1863,8 @@ class MainWindow(tk.Tk):
                     USER_ID INT,
                     PENDING_FIRST TEXT,
                     PENDING_LAST TEXT,
+                    PENDING_USER TEXT,
+                    FOREIGN KEY(PENDING_USER) REFERENCES PROFILE_DATA(USERNAME),
                     FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
     )'''
 
