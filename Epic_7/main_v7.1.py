@@ -354,6 +354,14 @@ class SignUpWindow(tk.Frame):
     self.fullNameEntry = tk.Entry(self,bd = 5)
     self.fullNameEntry.pack(padx=10, pady=10)
 
+    tk.Label(self,text= "Please select account tier:").pack(padx=10, pady=10)
+    self.clicked = StringVar()
+    self.clicked.set("Select Tier")
+
+    tiers = ["Standard", "Plus"]
+    self.dropdown = tk.OptionMenu(self, self.clicked, *tiers)
+    self.dropdown.pack(padx=10, pady=10)
+
     self.enterButton = tk.Button(self, text = "Enter", command = lambda: self.checkIfValid())
     self.enterButton.pack(padx = 10, pady = 10)
     global PrevWindow
@@ -370,6 +378,7 @@ class SignUpWindow(tk.Frame):
     usernameValid = False
     passwordValid = False
     fullNameValid = False
+    tierValid = False
 
     count += len(database)
     
@@ -429,14 +438,22 @@ class SignUpWindow(tk.Frame):
       self.firstName = nameCount[0]
       self.lastName = nameCount[1]
 
-    if usernameValid is True and passwordValid is True and fullNameValid is True:
+    if self.clicked.get() == "Select Tier":
+       messagebox.showerror("Error", "Please select an account tier.")
+    else:
+       tierValid = True
+
+    if usernameValid is True and passwordValid is True and fullNameValid is True and tierValid is True:
       data_insert_query = ('''INSERT INTO USER_DATA(
-                          USER_ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF) VALUES
-                          (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          USER_ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF, TIER) VALUES
+                          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                           ''')
       count += 1
       #executed through tuples since insert query cant read from variable
-      data_insert_tuple = (count, self.newUsername, self.newPassword, self.firstName, self.lastName, accEmailPrefs, accSMSPrefs, accTAPrefs, accLangPrefs)
+      data_insert_tuple = (count, self.newUsername, self.newPassword, 
+                           self.firstName, self.lastName, accEmailPrefs, 
+                           accSMSPrefs, accTAPrefs, accLangPrefs, 
+                           self.clicked.get())
 
       self.cursor.execute(data_insert_query, data_insert_tuple)
       self.conn.commit()
@@ -446,11 +463,13 @@ class SignUpWindow(tk.Frame):
       self.newUsernameEntry.delete(0, 'end')
       self.newPasswordEntry.delete(0, 'end')
       self.fullNameEntry.delete(0, 'end')
+      self.clicked.set("Select Tier")
       self.controller.show_frame("MainMenu")
 
       usernameValid = False
       passwordValid = False
       fullNameValid = False
+      tierValid = False
 
 
 class VideoWindow(tk.Frame):
@@ -1808,7 +1827,9 @@ class MainWindow(tk.Tk):
                     SMS_PREF INT, 
                     TA_PREF INT,
                     LANG_PREF TEXT,
+                    TIER TEXT,
                     PRIMARY KEY (USER_ID)
+                    
     )'''
 
     database.execute(table_create_query)
