@@ -1573,7 +1573,7 @@ class MessageFrame(tk.Frame):
 
     self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
     self.tier = self.cursor.execute(f'SELECT TIER FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
-    self.messages = self.conn.execute(f"SELECT * FROM MESSAGES WHERE RECEIVER = {self.user_id}").fetchall()
+    self.messages = self.conn.execute(f'SELECT SENDER, MESSAGE FROM MESSAGES WHERE RECEIVER = "{loginUsername}"').fetchall()
     self.friends = self.cursor.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = {self.user_id}").fetchall()
     self.usersList = self.cursor.execute(f"SELECT * FROM USER_DATA WHERE USER_ID != {self.user_id}").fetchall()
     self.names = self.cursor.execute(f"SELECT FIRSTNAME, LASTNAME FROM USER_DATA WHERE USER_ID != {self.user_id}").fetchall()
@@ -1657,8 +1657,8 @@ class MessageFrame(tk.Frame):
     self.backButton5.grid(padx=5, pady=5)
 
   def send_message(self):
-    sender = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
-    receiver = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = "{self.value[0]}" AND LASTNAME = "{self.value[1]}"').fetchone()[0]
+    sender = loginUsername
+    receiver = self.cursor.execute(f'SELECT USERNAME FROM USER_DATA WHERE FIRSTNAME = "{self.value[0]}" AND LASTNAME = "{self.value[1]}"').fetchone()[0]
     message = self.messageText.get("1.0", 'end-1c')
 
     message_query = ('''INSERT INTO MESSAGES(
@@ -1677,19 +1677,41 @@ class MessageFrame(tk.Frame):
 
   def inbox(self):
     self.remove_widgets()
-
+    self.remove_widgets2()
+    
     if len(self.messages) == 0:
       self.noMessagesLabel.grid(padx=5, pady=5)
       self.backButton2.grid(padx=5, pady=5)
 
     else:
-      self.clicked = StringVar()
+      for i in range(0, len(self.messages)):
+        messageList = []
+        messageList.append(f'"{self.messages[i][0]}": "{self.messages[i][1]}"')
       
-      self.dropdown = tk.OptionMenu(self, self.messages[0], *self.messages)
+
+      self.inboxLabel = tk.Label(self, text="Inbox:")
+      self.inboxLabel.grid(padx=5, pady=5)
+
+      self.clicked = StringVar()
+      self.clicked.set(messageList[0])
+      self.dropdown = tk.OptionMenu(self, self.clicked, *messageList)
       self.dropdown.grid(padx=5, pady=5)
 
+      self.deleteButton = tk.Button(self, text="Delete Message", command=self.delete_message)
+      self.deleteButton.grid(padx=5, pady=5)
       self.backButton3 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
       self.backButton3.grid(padx=5, pady=5)
+
+  def delete_message(self):
+    message = re.sub(r'"', '', self.clicked.get())
+    message = re.sub(":", "", message)
+    message = message.split(" ", 1)
+
+    self.cursor.execute(f'DELETE FROM MESSAGES WHERE SENDER = "{message[0]}" AND MESSAGE = "{message[1]}"')
+    self.conn.commit()
+
+    messagebox.showinfo("Message Deleted.", "You have successfully deleted the message.")
+    self.controller.show_frame("MessageFrame")
 
   def remove_widgets(self):
     try:
@@ -1708,7 +1730,9 @@ class MessageFrame(tk.Frame):
     except AttributeError:
       pass
     try:
+      self.inboxLabel.grid_remove()
       self.dropdown.grid_remove()
+      self.deleteButton.grid_remove()
       self.backButton3.grid_remove()
     except AttributeError:
       pass
@@ -1731,15 +1755,6 @@ class MessageFrame(tk.Frame):
       self.backButton5.grid_remove()
     except AttributeError:
       pass
-
-      
-    
-     
-      
-      
-    
-        
-
 
 
      
@@ -2060,8 +2075,8 @@ class MainWindow(tk.Tk):
     database.execute(friends_query)
     
     messaging_query = '''CREATE TABLE IF NOT EXISTS MESSAGES(
-                      SENDER INT,
-                      RECEIVER INT,
+                      SENDER TEXT,
+                      RECEIVER TEXT,
                       MESSAGE TEXT,
                       TIMESTAMP TEXT
     )'''
