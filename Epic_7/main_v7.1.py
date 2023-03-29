@@ -1622,8 +1622,8 @@ class MessageFrame(tk.Frame):
       self.backButton4.grid(padx=5, pady=5)
 
   def check_if_friend(self):
-    value = re.sub("[('),]", "", self.clicked.get())
-    value = value.split(' ')
+    self.value = re.sub("[('),]", "", self.clicked.get())
+    self.value = self.value.split(' ')
     
     valid = False
 
@@ -1631,7 +1631,7 @@ class MessageFrame(tk.Frame):
       self.type_message()
     else:
       for i in range(0, len(self.friends)):
-        if value[0] in self.friends[i] and value[1] in self.friends[i]:
+        if self.value[0] in self.friends[i] and self.value[1] in self.friends[i]:
           valid = True
           break
       if valid == False:
@@ -1657,7 +1657,22 @@ class MessageFrame(tk.Frame):
     self.backButton5.grid(padx=5, pady=5)
 
   def send_message(self):
-    print("hello")
+    sender = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
+    receiver = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE FIRSTNAME = "{self.value[0]}" AND LASTNAME = "{self.value[1]}"').fetchone()[0]
+    message = self.messageText.get("1.0", 'end-1c')
+
+    message_query = ('''INSERT INTO MESSAGES(
+                    SENDER, RECEIVER, MESSAGE) VALUES
+                    (?, ?, ?)
+                    ''')
+    
+    message_insert_tuple = (sender, receiver, message)
+
+    self.cursor.execute(message_query, message_insert_tuple)
+    self.conn.commit()
+
+    messagebox.showinfo("Message Sent.", "Your message has been sent.")
+    self.controller.show_frame("MessageFrame")
 
 
   def inbox(self):
@@ -1709,6 +1724,14 @@ class MessageFrame(tk.Frame):
       self.backButton4.grid_remove()
     except AttributeError:
       pass
+    try:
+      self.typeMessageLabel.grid_remove()
+      self.messageText.grid_remove()
+      self.sendMessageButton.grid_remove()
+      self.backButton5.grid_remove()
+    except AttributeError:
+      pass
+
       
     
      
