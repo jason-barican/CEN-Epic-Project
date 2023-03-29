@@ -5,6 +5,7 @@
 #Jason Barican
 #Jian Gong
 
+import re
 import tkinter as tk
 import sqlite3
 from tkinter import messagebox
@@ -1554,7 +1555,7 @@ class MessageFrame(tk.Frame):
     
     #widgets for initial screen in MessageFrame
     self.selectOptionLabel = tk.Label(self, text="Please select an option below:")
-    self.sendMessageButton = tk.Button(self, text="Send Message", command=self.select_user)
+    self.selectUserButton = tk.Button(self, text="Send Message", command=self.select_user)
     self.inboxButton = tk.Button(self, text="Inbox", command=self.inbox)
     self.backButton = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("ApplicationWindow"))
 
@@ -1571,13 +1572,14 @@ class MessageFrame(tk.Frame):
     self.cursor = self.conn.cursor() 
 
     self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
+    self.tier = self.cursor.execute(f'SELECT TIER FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
     self.messages = self.conn.execute(f"SELECT * FROM MESSAGES WHERE RECEIVER = {self.user_id}").fetchall()
-    self.friends = self.cursor.execute(f"SELECT * FROM FRIENDS WHERE USER_ID = {self.user_id}").fetchall()
+    self.friends = self.cursor.execute(f"SELECT FRIEND_FIRST, FRIEND_LAST FROM FRIENDS WHERE USER_ID = {self.user_id}").fetchall()
     self.usersList = self.cursor.execute(f"SELECT * FROM USER_DATA WHERE USER_ID != {self.user_id}").fetchall()
     self.names = self.cursor.execute(f"SELECT FIRSTNAME, LASTNAME FROM USER_DATA WHERE USER_ID != {self.user_id}").fetchall()
 
     self.selectOptionLabel.grid(padx=5, pady=5)
-    self.sendMessageButton.grid(padx=5, pady=5)
+    self.selectUserButton.grid(padx=5, pady=5)
     self.inboxButton.grid(padx=5, pady=5)
     self.backButton.grid(padx=5, pady=5)
 
@@ -1587,24 +1589,76 @@ class MessageFrame(tk.Frame):
 
   def select_user(self):
     self.remove_widgets()
+    self.remove_widgets2()
+    try:
+      self.typeMessageLabel.grid_remove()
+      self.messageText.grid_remove()
+      self.sendMessageButton.grid_remove()
+      self.backButton5.grid_remove()
+    except AttributeError:
+      pass
+    
 
-    self.selectFriendLabel = tk.Label(self, text="Please select user to send a message to.")
-    self.selectFriendLabel.grid(padx=5, pady=5)
+    if len(self.usersList) == 0:
+      self.noUsersLabel = tk.Label(self, text="There are no other registered users.")
+      self.noUsersLabel.grid(padx=5, pady=5)
 
-    self.clicked = StringVar()
-    self.clicked.set(self.names[0])
-    self.dropdown = tk.OptionMenu(self, self.clicked, *self.names)
-    self.dropdown.grid(padx=5, pady=5)
+      self.backButton4 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
+      self.backButton4.grid(padx=5, pady=5)
 
-    self.selectButton = tk.Button(self, text="Send A Message", command= self.send_message)
-    self.selectButton.grid(padx=5, pady=5)
+    else:
+      self.selectFriendLabel = tk.Label(self, text="Please select user to send a message to.")
+      self.selectFriendLabel.grid(padx=5, pady=5)
 
+      self.clicked = StringVar()
+      self.clicked.set(self.names[0])
+      self.dropdown = tk.OptionMenu(self, self.clicked, *self.names)
+      self.dropdown.grid(padx=5, pady=5)
 
-    self.backButton4 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
-    self.backButton4.grid(padx=5, pady=5)
+      self.selectButton = tk.Button(self, text="Send A Message", command= self.check_if_friend)
+      self.selectButton.grid(padx=5, pady=5)
+
+      self.backButton4 = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("MessageFrame"))
+      self.backButton4.grid(padx=5, pady=5)
+
+  def check_if_friend(self):
+    value = re.sub("[('),]", "", self.clicked.get())
+    value = value.split(' ')
+    
+    valid = False
+
+    if self.tier == "Premium":
+      self.type_message()
+    else:
+      for i in range(0, len(self.friends)):
+        if value[0] in self.friends[i] and value[1] in self.friends[i]:
+          valid = True
+          break
+      if valid == False:
+        messagebox.showerror("Error", "You cannot send a message to a user who is not in your friends list. Please select another user.")
+        self.select_user()
+      else:
+        self.type_message()
+          
+
+  def type_message(self):
+    self.remove_widgets2()
+
+    self.typeMessageLabel = tk.Label(self, text="Please type your message:")
+    self.typeMessageLabel.grid(padx=5, pady=5)
+
+    self.messageText = tk.Text(self, height=5)
+    self.messageText.grid(padx=5, pady=5)
+
+    self.sendMessageButton = tk.Button(self, text="Send Message", command= self.send_message)
+    self.sendMessageButton.grid(padx=5, pady=5)
+
+    self.backButton5 = tk.Button(self, text="Back", command=self.select_user)
+    self.backButton5.grid(padx=5, pady=5)
 
   def send_message(self):
     print("hello")
+
 
   def inbox(self):
     self.remove_widgets()
@@ -1625,7 +1679,7 @@ class MessageFrame(tk.Frame):
   def remove_widgets(self):
     try:
       self.selectOptionLabel.grid_remove()
-      self.sendMessageButton.grid_remove()
+      self.selectUserButton.grid_remove()
       self.inboxButton.grid_remove()
       self.backButton.grid_remove()
     except AttributeError:
@@ -1650,7 +1704,11 @@ class MessageFrame(tk.Frame):
       self.backButton4.grid_remove()
     except AttributeError:
       pass
-      
+    try:
+      self.noUsersLabel.grid_remove()
+      self.backButton4.grid_remove()
+    except AttributeError:
+      pass
       
     
      
@@ -1994,6 +2052,8 @@ class MainWindow(tk.Tk):
                     USER_ID INT,
                     PENDING_FIRST TEXT,
                     PENDING_LAST TEXT,
+                    PENDING_USER TEXT,
+                    FOREIGN KEY(PENDING_USER) REFERENCES PROFILE_DATA(USERNAME),
                     FOREIGN KEY (USER_ID) REFERENCES USER_DATA(USER_ID)
     )'''
 
