@@ -343,6 +343,13 @@ class LoginWindow(tk.Frame):
           print(message)
           if message is not None:
             messagebox.showwarning("Notification", "You have messages waiting for you!")
+
+          time = time.time - 604800
+          self.databaseCursor.execute("SELECT * from USER_DATA NATURAL JOIN APPLICATIONS WHERE USER_ID = ? AND CREATION_TIME>?", (loginUsername, time))
+          message = self.databaseCursor.fetchone()
+          print(message)
+          if message is not None:
+            messagebox.showwarning("Notification", "You have messages waiting for you!")
           
           self.controller.show_frame("ApplicationWindow")
 
@@ -1207,6 +1214,12 @@ class ViewJobApplicationFrame(tk.Frame):
     self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM APPLICATIONS WHERE USER_ID = {self.user_id}")
 
     database = self.cursor.fetchall()
+
+    self.cursor.execute("SELECT * FROM APPLICATIONS LEFT JOIN JOB_DATA ON APPLICATIONS.JOB_ID = JOB_DATA.JOB_ID WHERE JOB_DATA.JOB_ID IS NULL AND USER_ID = ?", (loginUsername))
+    message = self.cursor.fetchone()
+    print(message)
+    if message is not None:
+      messagebox.showwarning("Notification", "You have messages waiting for you!")
 
     try:
       self.emptyJobList_label.grid_remove()
