@@ -328,29 +328,53 @@ class LoginWindow(tk.Frame):
         if loginPassword in accounts[i]:
           
           self.loggedIn = True
-          currentTime = time.time()
+          
+          self.databaseCursor.execute("SELECT LAST_SEEN FROM USER_DATA WHERE USERNAME = ?",(loginUsername,))
+          lastSeenTime = float(self.databaseCursor.fetchone()[0])
 
+          self.databaseCursor.execute("SELECT FIRSTNAME, LASTNAME, USERNAME FROM USER_DATA WHERE CAST(CREATION_TIME AS decimal) > ?",(lastSeenTime,))
+          newUsers = self.databaseCursor.fetchall()
+          print(newUsers)
+          if len(newUsers) > 0:
+            userList = ""
+            for user in newUsers:
+              userList += "Name: " + user[0] + " " + user[1] + ", Username: " + user[2] + "\n"
+
+            messagebox.showwarning("Notification", "New users have joined InCollege:\n" + userList)
+
+          currentTime = time.time()
           self.databaseCursor.execute("UPDATE USER_DATA SET LAST_SEEN = ? WHERE USERNAME = ?", (currentTime,loginUsername))
           self.database.commit()
 
-          self.databaseCursor.execute("SELECT * from PROFILE_DATA WHERE username = ?", (loginUsername,))
+          self.databaseCursor.execute("SELECT * from PROFILE_DATA WHERE USERNAME = ?", (loginUsername,))
           profileInfo = self.databaseCursor.fetchone()
           if profileInfo == None:
             messagebox.showwarning("Notification", "It appears that you have not created a profile yet. Don't forget to create a profile!")
 
           self.databaseCursor.execute("SELECT * from MESSAGES WHERE RECEIVER = ?", (loginUsername,))
           message = self.databaseCursor.fetchone()
-          print(message)
           if message is not None:
             messagebox.showwarning("Notification", "You have messages waiting for you!")
+###############################
+          lastWeekTime = time.time() - 604800
+          user_id = self.databaseCursor.execute("SELECT USER_ID FROM USER_DATA WHERE USERNAME = ?", (loginUsername,)).fetchone()[0]
+          self.databaseCursor.execute("SELECT * FROM APPLICATIONS WHERE CAST(CREATION_TIME AS decimal) > ? AND USER_ID = ?",(lastWeekTime, user_id))
+          last7daysApp = self.databaseCursor.fetchone()
+          if last7daysApp is None:
+            messagebox.showwarning("Notification", "Remember – you're going to want to have a job when you graduate. Make sure that you start to apply for jobs today!")
 
-          time = time.time - 604800
-          self.databaseCursor.execute("SELECT * from USER_DATA NATURAL JOIN APPLICATIONS WHERE USER_ID = ? AND CREATION_TIME>?", (loginUsername, time))
+###############################
+          self.databaseCursor.execute("SELECT * FROM APPLICATIONS LEFT JOIN JOB_DATA ON APPLICATIONS.JOB_ID = JOB_DATA.JOB_ID WHERE JOB_DATA.JOB_ID IS NULL")# AND USER_ID = ?", (loginUsername))
+          message = self.databaseCursor.fetchone()
+          if message is None:
+            messagebox.showwarning("Notification", "A job that you applied for has been deleted")
+
+          self.databaseCursor.execute("SELECT * from JOB_DATA NATURAL JOIN USER_DATA WHERE CREATION_TIME>LAST_SEEN")
           message = self.databaseCursor.fetchone()
           print(message)
-          if message is not None:
-            messagebox.showwarning("Notification", "You have messages waiting for you!")
-          
+          if message is None:
+            messagebox.showwarning("Notification", "A new job has been posted")
+
           self.controller.show_frame("ApplicationWindow")
 
     if self.loggedIn == False:
@@ -705,16 +729,15 @@ class JobSearchFrame(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
     self.controller = controller
-    
+#########################################
     self.conn = sqlite3.connect('database.db')  	
     self.cursor = self.conn.cursor()
-
     # Create a Button
     button = Button(self, text="Notifications", command=self.app_count, height=5, width=10)
       
     # Set the position of button on the top of window.
     button.pack(side='top')
-
+#######################################
     tk.Label(self, text="Welcome to Job/Internship Search!\nPlease select an option below.").pack(padx=10, pady=10)
 
     applyForJobButton = tk.Button(self, text = "Apply For Job", command = lambda: controller.show_frame("JobApplicationFrame"))
@@ -737,14 +760,13 @@ class JobSearchFrame(tk.Frame):
 
     backButton = tk.Button(self, text = "Back", command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
-    
+
   def app_count(self):
     global loginUsername
-    user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()
+    user_id = self.cursor.execute("SELECT USER_ID FROM USER_DATA WHERE USERNAME = ?", (loginUsername,)).fetchone()[0]
     app_count = 0
-    app_count = self.cursor.execute(f'SELECT COUNT(*) FROM APPLICATIONS WHERE USER_ID="{user_id}"').fetchone()
-    message = "You have applied for ", app_count, " jobs."
-    messagebox.showinfo("Application Count", message)
+    app_count = self.cursor.execute("SELECT COUNT(*) FROM APPLICATIONS WHERE USER_ID = ?",(user_id,)).fetchone()[0]
+    messagebox.showinfo("Application Count", "You have applied for " + str(app_count) + " jobs.")
 
 class AddJobFrame(tk.Frame):
   def __init__(self, parent, controller):
@@ -802,7 +824,7 @@ class AddJobFrame(tk.Frame):
       else:	
         job_id = self.cursor.execute(f'SELECT COUNT(*) FROM JOB_DATA').fetchone()[0]
         job_id += 1
-        currentTime=time.time
+        currentTime = time.time()
         title = self.title_entry.get()	
         description = self.description_entry.get()	
         employer = self.employer_entry.get()	
@@ -927,7 +949,6 @@ class RemoveJobFrame(tk.Frame):
 
     self.cursor.execute(f'DELETE FROM SAVED_JOBS WHERE TITLE = "{value[0]}" AND EMPLOYER = "{value[2]}"')
     self.conn.commit()
-    
 
     messagebox.showinfo("Job Deleted", "You have successfully deleted the job.")
     self.controller.show_frame("JobSearchFrame")
@@ -944,12 +965,6 @@ class JobApplicationFrame(tk.Frame):
     self.emptyJobList_label= tk.Label(self, text="There are currently no posted jobs.")
     self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
     
-    self.cursor.execute("SELECT * from JOB_DATA NATURAL JOIN USER_DATA WHERE CREATION_TIME>LAST_SEEN")
-    message = self.cursor.fetchone()
-    print(message)
-    if message is not None:
-      messagebox.showwarning("Notification", "A new job has been posted")
-
     #widget declarations for if database isn't empty
     self.dropdown_label = tk.Label(self, text="Please select job.")
     self.dropdown = None
@@ -966,6 +981,11 @@ class JobApplicationFrame(tk.Frame):
     self.bind("<<ShowFrame>>", self.on_show_frame)
 
   def on_show_frame(self, event):
+    ######################################
+
+#######################################
+    
+    
     self.user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
     self.job_id = self.cursor.execute(f'SELECT JOB_ID FROM APPLICATIONS WHERE USER_ID = "{self.user_id}"').fetchall()
 
@@ -975,8 +995,7 @@ class JobApplicationFrame(tk.Frame):
       self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM JOB_DATA WHERE POSTED_BY != {self.user_id}")
     
     database = self.cursor.fetchall()
-    
-    
+     
 
     try:
       self.job_title.grid_remove()
@@ -1161,7 +1180,7 @@ class JobApplicationFrame(tk.Frame):
       # Retrieve the job details
       global loginUsername
 
-      currentTime=time.time
+      currentTime = time.time()
       user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()[0]
 
       job_id = self.job[0][0]
@@ -1173,7 +1192,7 @@ class JobApplicationFrame(tk.Frame):
       why = self.why_entry.get(1.0, "end-1c")
 
       # Insert the application data into the database
-      self.cursor.execute('INSERT OR IGNORE INTO APPLICATIONS (JOB_ID, USER_ID, TITLE, EMPLOYER, DESCRIPTION, GRADUATION_DATE, START_DATE, WHY, CREATION_TIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      self.cursor.execute('INSERT OR IGNORE INTO APPLICATIONS (JOB_ID, USER_ID, TITLE, EMPLOYER, DESCRIPTION, GRADUATION_DATE, START_DATE, WHY, CREATION_TIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                             (job_id, user_id, job_title, job_employer, job_description, graduation_date, start_date, why, currentTime))
       self.conn.commit()
 
@@ -1214,13 +1233,9 @@ class ViewJobApplicationFrame(tk.Frame):
     self.cursor.execute(f"SELECT TITLE, EMPLOYER FROM APPLICATIONS WHERE USER_ID = {self.user_id}")
 
     database = self.cursor.fetchall()
+################################
 
-    self.cursor.execute("SELECT * FROM APPLICATIONS LEFT JOIN JOB_DATA ON APPLICATIONS.JOB_ID = JOB_DATA.JOB_ID WHERE JOB_DATA.JOB_ID IS NULL AND USER_ID = ?", (loginUsername))
-    message = self.cursor.fetchone()
-    print(message)
-    if message is not None:
-      messagebox.showwarning("Notification", "You have messages waiting for you!")
-
+######################################
     try:
       self.emptyJobList_label.grid_remove()
       self.back_button.grid_remove()
