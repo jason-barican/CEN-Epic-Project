@@ -10,6 +10,7 @@ import tkinter as tk
 import sqlite3
 from tkinter import messagebox
 from tkinter import *
+import time
 import Important_Links as IL
 import Useful_Links as UL
 #import Profile_Functions as PF
@@ -327,7 +328,22 @@ class LoginWindow(tk.Frame):
         if loginPassword in accounts[i]:
           
           self.loggedIn = True
-          messagebox.showinfo("Logged In", "You have successfully logged in.")
+          currentTime = time.time()
+
+          self.databaseCursor.execute("UPDATE USER_DATA SET LAST_SEEN = ? WHERE USERNAME = ?", (currentTime,loginUsername))
+          self.database.commit()
+
+          self.databaseCursor.execute("SELECT * from PROFILE_DATA WHERE username = ?", (loginUsername,))
+          profileInfo = self.databaseCursor.fetchone()
+          if profileInfo == None:
+            messagebox.showwarning("Notification", "It appears that you have not created a profile yet. Don't forget to create a profile!")
+
+          self.databaseCursor.execute("SELECT * from MESSAGES WHERE RECEIVER = ?", (loginUsername,))
+          message = self.databaseCursor.fetchone()
+          print(message)
+          if message is not None:
+            messagebox.showwarning("Notification", "You have messages waiting for you!")
+
           self.controller.show_frame("ApplicationWindow")
 
     if self.loggedIn == False:
@@ -446,15 +462,17 @@ class SignUpWindow(tk.Frame):
 
     if usernameValid is True and passwordValid is True and fullNameValid is True and tierValid is True:
       data_insert_query = ('''INSERT INTO USER_DATA(
-                          USER_ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF, TIER) VALUES
-                          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          USER_ID, USERNAME, PASSWORD, FIRSTNAME, LASTNAME, EMAIL_PREF, SMS_PREF, TA_PREF, LANG_PREF, TIER, CREATION_TIME, LAST_SEEN) VALUES
+                          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                           ''')
       count += 1
+
+      currentTime = time.time()
       #executed through tuples since insert query cant read from variable
       data_insert_tuple = (count, self.newUsername, self.newPassword, 
                            self.firstName, self.lastName, accEmailPrefs, 
                            accSMSPrefs, accTAPrefs, accLangPrefs, 
-                           self.clicked.get())
+                           self.clicked.get(), currentTime, currentTime)
 
       self.cursor.execute(data_insert_query, data_insert_tuple)
       self.conn.commit()
@@ -680,7 +698,7 @@ class JobSearchFrame(tk.Frame):
   def __init__(self, parent, controller):
     tk.Frame.__init__(self, parent)
     self.controller = controller
-
+    
     self.conn = sqlite3.connect('database.db')  	
     self.cursor = self.conn.cursor()
 
@@ -712,10 +730,9 @@ class JobSearchFrame(tk.Frame):
 
     backButton = tk.Button(self, text = "Back", command = lambda: controller.show_frame("ApplicationWindow"))
     backButton.pack(padx=10, pady=10)
-
+    
   def app_count(self):
     global loginUsername
-
     user_id = self.cursor.execute(f'SELECT USER_ID FROM USER_DATA WHERE USERNAME = "{loginUsername}"').fetchone()
     app_count = 0
     app_count = self.cursor.execute(f'SELECT COUNT(*) FROM APPLICATIONS WHERE USER_ID="{user_id}"').fetchone()
@@ -918,8 +935,7 @@ class JobApplicationFrame(tk.Frame):
     #widget declarations for if database is empty
     self.emptyJobList_label= tk.Label(self, text="There are currently no posted jobs.")
     self.back_button = tk.Button(self, text="Back", command=lambda: self.controller.show_frame("JobSearchFrame"))
-  
-
+    
     #widget declarations for if database isn't empty
     self.dropdown_label = tk.Label(self, text="Please select job.")
     self.dropdown = None
@@ -1655,7 +1671,7 @@ class MessageFrame(tk.Frame):
       self.selectFriendLabel.grid(padx=5, pady=5)
 
       self.clicked = StringVar()
-      self.clicked.set(self.names[0])
+      self.clicked.set("Select user")
       self.dropdown = tk.OptionMenu(self, self.clicked, *self.names)
       self.dropdown.grid(padx=5, pady=5)
 
@@ -1728,16 +1744,16 @@ class MessageFrame(tk.Frame):
       self.backButton2.grid(padx=5, pady=5)
 
     else:
+      messageList = []
       for i in range(0, len(self.messages)):
-        messageList = []
-        messageList.append(f'"{self.messages[i][0]}": "{self.messages[i][1]}"')
+        messageList.append(f'From: {self.messages[i][0]}, \nMessage: "{self.messages[i][1]}"')
       
 
       self.inboxLabel = tk.Label(self, text="Inbox:")
       self.inboxLabel.grid(padx=5, pady=5)
 
       self.clicked = StringVar()
-      self.clicked.set(messageList[0])
+      self.clicked.set("Select message")
       self.dropdown = tk.OptionMenu(self, self.clicked, *messageList)
       self.dropdown.grid(padx=5, pady=5)
 
@@ -1959,7 +1975,6 @@ class DisplayProfileFrame(tk.Frame):
         #global loginUsername
         global selectedProfileUsername
         self.profUsername = selectedProfileUsername#loginUsername
-
         self.profile = {'title': '',
             'major': '',
             'university': '',
@@ -1971,34 +1986,22 @@ class DisplayProfileFrame(tk.Frame):
         self.bind("<<ShowFrame>>", self.on_show_frame)
 
         self.name_label = tk.Label(self, text=f""+self.profUsername)
-        self.name_label.grid(row=0, column=0, padx=10, pady=10)
+        self.name_label.config(font=('DejaVu Sans', 20))
 
         self.title_label = tk.Label(self, text=f"Title: {self.profile['title']}")
-        self.title_label.grid(row=1, column=0, padx=10, pady=10)
 
         self.major_label = tk.Label(self, text=f"Major: {self.profile['major']}")
-        self.major_label.grid(row=2, column=0, padx=10, pady=10)
 
         self.university_label = tk.Label(self, text=f"University: {self.profile['university']}")
-        self.university_label.grid(row=3, column=0, padx=10, pady=10)
 
         self.info_label = tk.Label(self, text=f"Info: {self.profile['info']}")
-        self.info_label.grid(row=4, column=0, padx=10, pady=10)
 
         self.experience_label = tk.Label(self, text="Experience:")
-        self.experience_label.grid(row=5, column=0, padx=10, pady=10)
-        for experience in self.profile['experience']:
-            experience_line_label = tk.Label(self, text=f"- {experience}")
-            experience_line_label.grid(row=6, column=0, padx=10, pady=10)
 
         self.education_label = tk.Label(self, text="Education:")
-        self.education_label.grid(row=7, column=0, padx=10, pady=10)
-        for education in self.profile['education']:
-            education_line_label = tk.Label(self, text=f"- {education}")
-            education_line_label.grid(row=8, column=0, padx=10, pady=10)
         
-        backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
-        backButton.grid(row=9,column=1)
+        self.backButton = tk.Button(self, text="Back", command=lambda: controller.show_frame("ApplicationWindow"))
+        self.backButton.grid(row=9,column=0)
     
 
     def on_show_frame(self, event):
@@ -2013,24 +2016,48 @@ class DisplayProfileFrame(tk.Frame):
         #print(profile_data)
         #profile_data = array('i', profile_data_tup)
         # convert the retrieved data to a dictionary
-        profUsername = profile_data[0]
-        self.profile = {
-            'title': profile_data[1],
-            'major': profile_data[2],
-            'university': profile_data[3],
-            'about': profile_data[4],
-            'experience': profile_data[5].split('\n') if profile_data[4] else [],
-            'education': profile_data[6].split('\n') if profile_data[5] else []
-        }
-        # update label text
-        self.profUsername = selectedProfileUsername#loginUsername
-        self.name_label['text'] = self.profUsername
-        self.title_label['text'] = f"Title: {self.profile['title']}"
-        self.major_label['text'] = f"Major: {self.profile['major']}"
-        self.university_label['text'] = f"University: {self.profile['university']}"
-        self.info_label['text'] = f"About: {self.profile['about']}"
-        self.experience_label['text'] = f"Experience: {self.profile['experience']}"
-        self.education_label['text'] = f"Education: {self.profile['education']}"
+        if profile_data == None:
+          self.name_label['text'] = f"No profile has been created for this account. Please create one!"
+          self.title_label['text'] = f"Title: "
+          self.major_label['text'] = f"Major: "
+          self.university_label['text'] = f"University: "
+          self.info_label['text'] = f"About: "
+          self.experience_label['text'] = f"Experience: "
+          self.education_label['text'] = f"Education: "
+        else:
+          self.name_label.grid(row=0, column=0, padx=10, pady=10)
+          self.title_label.grid(row=1, column=0, padx=10, pady=10)
+          self.major_label.grid(row=2, column=0, padx=10, pady=10)
+          self.university_label.grid(row=3, column=0, padx=10, pady=10)
+          self.info_label.grid(row=4, column=0, padx=10, pady=10)
+          self.experience_label.grid(row=5, column=0, padx=10, pady=10)
+          self.education_label.grid(row=7, column=0, padx=10, pady=10)
+
+          for experience in self.profile['experience']:
+            self.experience_line_label = tk.Label(self, text=f"- {experience}")
+            self.experience_line_label.grid(row=6, column=0, padx=10, pady=10)
+
+          for education in self.profile['education']:
+            self.education_line_label = tk.Label(self, text=f"- {education}")
+            self.education_line_label.grid(row=8, column=0, padx=10, pady=10)
+
+          self.profile = {
+              'title': profile_data[1],
+              'major': profile_data[2],
+              'university': profile_data[3],
+              'about': profile_data[4],
+              'experience': profile_data[5].split('\n') if profile_data[4] else [],
+              'education': profile_data[6].split('\n') if profile_data[5] else []
+          }
+          # update label text
+          self.profUsername = selectedProfileUsername#loginUsername
+          self.name_label['text'] = self.profUsername
+          self.title_label['text'] = f"Title: {self.profile['title']}"
+          self.major_label['text'] = f"Major: {self.profile['major']}"
+          self.university_label['text'] = f"University: {self.profile['university']}"
+          self.info_label['text'] = f"About: {self.profile['about']}"
+          self.experience_label['text'] = f"Experience: {self.profile['experience']}"
+          self.education_label['text'] = f"Education: {self.profile['education']}"
 
 
 
@@ -2073,6 +2100,8 @@ class MainWindow(tk.Tk):
                     TA_PREF INT,
                     LANG_PREF TEXT,
                     TIER TEXT,
+                    CREATION_TIME TEXT,
+                    LAST_SEEN TEXT,
                     PRIMARY KEY (USER_ID)
                     
     )'''
